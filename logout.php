@@ -1,3 +1,6 @@
 <?php
-// logout.php
-// Script untuk menghancurkan session
+session_start();
+session_unset();
+session_destroy();
+header('Location: login.php');
+exit;
