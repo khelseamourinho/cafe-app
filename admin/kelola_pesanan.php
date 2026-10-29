@@ -49,7 +49,7 @@ $where = $filter_status
     : '';
 
 $query = "SELECT o.id_order, u.nama AS nama_customer, o.total_harga,
-                 o.metode_pembayaran, o.status_pesanan, o.created_at
+                 o.metode_pembayaran, o.status_pesanan, o.tipe_order, o.created_at
           FROM orders o
           JOIN users u ON o.id_user = u.id_user
           $where
@@ -129,7 +129,11 @@ require '../includes/header.php';
         <div>
             <strong>Pesanan #<?= $order['id_order'] ?></strong>
             &nbsp;·&nbsp;
-            <span><?= htmlspecialchars($order['nama_customer']) ?></span><br>
+            <span><?= htmlspecialchars($order['nama_customer']) ?></span>
+            &nbsp;·&nbsp;
+            <span class="badge <?= ($order['tipe_order'] ?? '') === 'take_away' ? 'bg-warning text-dark' : 'bg-success' ?> small">
+                <?= ($order['tipe_order'] ?? '') === 'take_away' ? '🥡 Take Away' : '🍽️ Dine In' ?>
+            </span><br>
             <small class="text-muted"><?= date('d M Y, H:i', strtotime($order['created_at'])) ?></small>
             &nbsp;·&nbsp;
             <small class="text-muted"><?= $order['metode_pembayaran'] ?></small>

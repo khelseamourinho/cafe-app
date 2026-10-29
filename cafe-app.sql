@@ -29,6 +29,7 @@ CREATE TABLE orders (
     metode_pembayaran ENUM('Cash', 'QRIS') NOT NULL,
     status_pesanan ENUM('Pending', 'Sedang Dibuat', 'Siap Pick-up', 'Selesai') NOT NULL DEFAULT 'Pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ALTER TABLE orders ADD tipe_order ENUM('dine_in', 'take_away') NOT NULL;
     FOREIGN KEY (id_user) REFERENCES users(id_user) ON DELETE CASCADE
 );
 

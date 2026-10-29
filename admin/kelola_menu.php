@@ -92,7 +92,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['aksi'] ?? '') === 'edit') 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['aksi'] ?? '') === 'simpan_biaya') {
     $pajak_val   = max(0, (int) $_POST['pajak_persen']);
     $layanan_val = max(0, (int) $_POST['biaya_layanan_persen']);
-    $isi_file = "<?php\n/**\n * Pengaturan Pajak & Biaya Layanan\n * File ini di-include oleh checkout.php dan diupdate oleh admin/kelola_menu.php\n */\n\$pajak_persen         = $pajak_val;\n\$biaya_layanan_persen = $layanan_val;\n?>\n";
+    $kemasan_val = max(0, (int) $_POST['biaya_kemasan']);
+    $isi_file = "<?php\n/**\n * Pengaturan Pajak, Biaya Layanan & Biaya Kemasan\n * File ini di-include oleh checkout.php dan diupdate oleh admin/kelola_menu.php\n */\n\$pajak_persen         = $pajak_val;\n\$biaya_layanan_persen = $layanan_val;\n\$biaya_kemasan        = $kemasan_val;\n?>\n";
     file_put_contents(__DIR__ . '/../config/biaya.php', $isi_file);
     header('Location: kelola_menu.php?pesan=biaya');
     exit;
@@ -194,30 +195,36 @@ require '../includes/header.php';
     </div>
 </div>
 
-<!-- ══════════════ Pengaturan Pajak & Biaya Layanan ══════════════ -->
+<!-- ══════════════ Pengaturan Pajak, Biaya Layanan & Kemasan ══════════════ -->
 <div class="card mt-4 mb-4">
     <div class="card-header">
-        <h5 class="mb-0">Pengaturan Pajak & Biaya Layanan</h5>
+        <h5 class="mb-0">Pengaturan Pajak, Biaya Layanan & Kemasan</h5>
     </div>
     <div class="card-body">
         <form method="POST" action="kelola_menu.php">
             <input type="hidden" name="aksi" value="simpan_biaya">
             <div class="row g-3 align-items-end">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label class="form-label">Pajak (%)</label>
                     <input type="number" name="pajak_persen" class="form-control"
                            value="<?= $pajak_persen ?>" min="0" max="100" required>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label class="form-label">Biaya Layanan (%)</label>
                     <input type="number" name="biaya_layanan_persen" class="form-control"
                            value="<?= $biaya_layanan_persen ?>" min="0" max="100" required>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
+                    <label class="form-label">Biaya Kemasan (Rp)</label>
+                    <input type="number" name="biaya_kemasan" class="form-control"
+                           value="<?= $biaya_kemasan ?>" min="0" required>
+                    <div class="text-muted small mt-1">Dikenakan untuk pesanan Take Away.</div>
+                </div>
+                <div class="col-md-3">
                     <button type="submit" class="btn btn-primary w-100">Simpan Pengaturan</button>
                 </div>
             </div>
-            <div class="text-muted small mt-2">Persentase ini akan diterapkan pada setiap pesanan di halaman checkout.</div>
+            <div class="text-muted small mt-2">Pengaturan ini akan diterapkan pada setiap pesanan di halaman checkout.</div>
         </form>
     </div>
 </div>
