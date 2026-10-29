@@ -4,6 +4,13 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 $sudah_login = isset($_SESSION['id_user']);
 $is_admin    = isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
+
+// $base_path diset oleh halaman yang include file ini.
+// Halaman di root  → $base_path = ''
+// Halaman di admin/ → $base_path = '../'
+if (!isset($base_path)) {
+    $base_path = '';
+}
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -17,17 +24,18 @@ $is_admin    = isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
 <nav class="navbar bg-body-tertiary border-bottom">
     <div class="container d-flex justify-content-between align-items-center">
 
-        <a class="navbar-brand d-flex align-items-center" href="index.php">
-            <img src="assets/logo.jpeg" alt="Logo Cafe Kita" height="36" class="me-2">
+        <a class="navbar-brand d-flex align-items-center" href="<?= $base_path ?>index.php">
+            <img src="<?= $base_path ?>assets/logo.jpeg" alt="Logo Cafe Kita" height="36" class="me-2">
             Cafe Kita
         </a>
 
         <div class="d-flex align-items-center">
             <?php if (!$sudah_login): ?>
-                <a class="btn btn-outline-primary btn-sm me-2" href="login.php">Login</a>
+                <a class="btn btn-outline-primary btn-sm me-2" href="<?= $base_path ?>login.php">Login</a>
             <?php endif; ?>
 
-            <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#menuOffcanvas" aria-controls="menuOffcanvas" aria-label="Buka menu">
+            <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas"
+                    data-bs-target="#menuOffcanvas" aria-controls="menuOffcanvas" aria-label="Buka menu">
                 <span class="navbar-toggler-icon"></span>
             </button>
         </div>
@@ -49,15 +57,19 @@ $is_admin    = isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
     <div class="offcanvas-body">
         <div class="list-group list-group-flush">
             <?php if ($sudah_login): ?>
+                <a class="list-group-item list-group-item-action" href="<?= $base_path ?>index.php">Katalog Menu</a>
                 <?php if ($is_admin): ?>
-                    <a class="list-group-item list-group-item-action" href="admin/dashboard.php">Dashboard Admin</a>
+                    <div class="list-group-item list-group-item-action disabled text-muted small px-3 py-1">Panel Admin</div>
+                    <a class="list-group-item list-group-item-action" href="<?= $base_path ?>admin/dashboard.php">Dashboard</a>
+                    <a class="list-group-item list-group-item-action" href="<?= $base_path ?>admin/kelola_menu.php">Kelola Menu</a>
+                    <a class="list-group-item list-group-item-action" href="<?= $base_path ?>admin/kelola_pesanan.php">Kelola Pesanan</a>
                 <?php endif; ?>
-                <a class="list-group-item list-group-item-action" href="riwayat.php">Riwayat Pesanan</a>
-                <a class="list-group-item list-group-item-action" href="profil.php">Profil Akun</a>
-                <a class="list-group-item list-group-item-action text-danger" href="logout.php">Logout</a>
+                <a class="list-group-item list-group-item-action" href="<?= $base_path ?>riwayat.php">Riwayat Pesanan</a>
+                <a class="list-group-item list-group-item-action" href="<?= $base_path ?>profil.php">Profil Akun</a>
+                <a class="list-group-item list-group-item-action text-danger" href="<?= $base_path ?>logout.php">Logout</a>
             <?php else: ?>
-                <a class="list-group-item list-group-item-action" href="login.php">Login</a>
-                <a class="list-group-item list-group-item-action" href="register.php">Daftar</a>
+                <a class="list-group-item list-group-item-action" href="<?= $base_path ?>login.php">Login</a>
+                <a class="list-group-item list-group-item-action" href="<?= $base_path ?>register.php">Daftar</a>
             <?php endif; ?>
         </div>
     </div>
