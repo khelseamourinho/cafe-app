@@ -33,7 +33,7 @@ if ($aksi === 'register') {
 }
 
 if ($aksi === 'login') {
-    $query = "SELECT id_user, nama, password, role FROM users WHERE username = ?";
+    $query = "SELECT id_user, nama, username, password, role FROM users WHERE username = ?";
     $stmt  = mysqli_prepare($koneksi, $query);
     if (!$stmt) {
         die(mysqli_error($koneksi));
@@ -49,9 +49,10 @@ if ($aksi === 'login') {
 
     if ($user && password_verify($password, $user['password'])) {
         session_regenerate_id(true);
-        $_SESSION['id_user'] = $user['id_user'];
-        $_SESSION['nama']    = $user['nama'];
-        $_SESSION['role']    = $user['role'];
+        $_SESSION['id_user']   = $user['id_user'];
+        $_SESSION['nama']      = $user['nama'];
+        $_SESSION['username']  = $user['username'];
+        $_SESSION['role']      = $user['role'];
 
         if ($user['role'] === 'admin') {
             header('Location: admin/dashboard.php');

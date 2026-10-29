@@ -97,17 +97,17 @@ $hasil_menu = mysqli_query($koneksi, $query_menu) or die("Query gagal: " . mysql
 </div>
 
 <!-- ═══ FLOATING BAR: Keranjang ═══════════════════════════════════════════════ -->
-<div id="floating-bar" class="position-fixed bottom-0 start-0 end-0 bg-white border-top shadow-lg py-3 <?= $total_item > 0 ? '' : 'd-none' ?>" style="z-index:1050">
-    <div class="container d-flex justify-content-between align-items-center">
-        <a href="#" role="button" class="text-decoration-none text-dark d-flex align-items-center" data-bs-toggle="offcanvas" data-bs-target="#keranjangOffcanvas">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-cart3 me-1" viewBox="0 0 16 16">
+<div id="floating-bar" class="position-fixed bottom-0 start-0 end-0 py-3 <?= $total_item > 0 ? '' : 'd-none' ?>" style="z-index:1050;background:linear-gradient(180deg,#f8f9fa,#ffffff);border-top:2px solid #e9ecef;box-shadow:0 -4px 24px rgba(0,0,0,.12);border-radius:16px 16px 0 0">
+    <div class="container d-flex justify-content-center align-items-center">
+        <a href="#" role="button" class="text-decoration-none text-dark d-flex align-items-center gap-2 px-4 py-2 rounded-pill" data-bs-toggle="offcanvas" data-bs-target="#keranjangOffcanvas" style="background:#e9ecef;transition:all .2s ease" onmouseover="this.style.background='#dee2e6'" onmouseout="this.style.background='#e9ecef'">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-cart3" viewBox="0 0 16 16">
                 <path d="M0 1.5A.5.5 0 0 1 .5 1H2a.5.5 0 0 1 .485.379L2.89 3H14.5a.5.5 0 0 1 .49.598l-1 5a.5.5 0 0 1-.465.401l-9.397.472L4.415 11H13a.5.5 0 0 1 0 1H4a.5.5 0 0 1-.491-.408L2.01 3.607 1.61 2H.5a.5.5 0 0 1-.5-.5M3.102 4l.84 4.479 9.144-.459L13.89 4zM5 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4m7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4m-7 1a1 1 0 1 1 0 2 1 1 0 0 1 0-2m7 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/>
             </svg>
             <span class="fw-semibold" id="floating-total-item"><?= $total_item ?></span>
-            <span class="text-muted ms-1">item di keranjang</span>
+            <span class="text-muted small">item</span>
         </a>
-        <a href="checkout.php" class="btn btn-primary">
-            Lanjut ke Checkout &rarr;
+        <a href="checkout.php" class="btn btn-primary btn-lg px-4 rounded-pill shadow-sm" style="font-weight:600;letter-spacing:.3px">
+            Pilih Metode Pembayaran &rarr;
         </a>
     </div>
 </div>
@@ -179,7 +179,7 @@ $hasil_menu = mysqli_query($koneksi, $query_menu) or die("Query gagal: " . mysql
                 <span class="fw-bold" id="keranjang-total-harga">Rp <?= number_format($total_harga_keranjang, 0, ',', '.') ?></span>
             </div>
             <small class="text-muted d-block mb-3">Belum termasuk pajak & biaya layanan</small>
-            <a href="checkout.php" class="btn btn-primary w-100 mb-2">Lanjut ke Checkout &rarr;</a>
+            <!-- <a href="checkout.php" class="btn btn-primary w-100 mb-2">Lanjut ke Checkout &rarr;</a> -->
             <button type="button" class="btn btn-outline-danger btn-sm w-100" id="btn-kosongkan-keranjang">Kosongkan Keranjang</button>
         </div>
     </div>
