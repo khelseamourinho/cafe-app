@@ -88,10 +88,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['aksi'] ?? '') === 'edit') 
     exit;
 }
 
+// ─── SIMPAN PENGATURAN BIAYA ─────────────────────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['aksi'] ?? '') === 'simpan_biaya') {
+    $pajak_val   = max(0, (int) $_POST['pajak_persen']);
+    $layanan_val = max(0, (int) $_POST['biaya_layanan_persen']);
+    $isi_file = "<?php\n/**\n * Pengaturan Pajak & Biaya Layanan\n * File ini di-include oleh checkout.php dan diupdate oleh admin/kelola_menu.php\n */\n\$pajak_persen         = $pajak_val;\n\$biaya_layanan_persen = $layanan_val;\n?>\n";
+    file_put_contents(__DIR__ . '/../config/biaya.php', $isi_file);
+    header('Location: kelola_menu.php?pesan=biaya');
+    exit;
+}
+
 // ─── Ambil daftar menu ───────────────────────────────────────────────────────
 $hasil_menu  = mysqli_query($koneksi, "SELECT * FROM menus ORDER BY id_menu ASC")
     or die(mysqli_error($koneksi));
 $daftar_menu = mysqli_fetch_all($hasil_menu, MYSQLI_ASSOC);
+
+// ─── Baca pengaturan biaya saat ini ──────────────────────────────────────────
+include __DIR__ . '/../config/biaya.php';
 
 // ─── Data menu untuk modal edit ──────────────────────────────────────────────
 $menu_edit = null;
@@ -123,6 +136,10 @@ require '../includes/header.php';
 <?php elseif ($pesan === 'hapus'): ?>
     <div class="alert alert-warning alert-dismissible fade show">
         Menu berhasil dihapus. <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+<?php elseif ($pesan === 'biaya'): ?>
+    <div class="alert alert-success alert-dismissible fade show">
+        Pengaturan pajak & biaya layanan berhasil disimpan. <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 <?php endif; ?>
 
@@ -174,6 +191,34 @@ require '../includes/header.php';
                 <?php endforeach; ?>
             </tbody>
         </table>
+    </div>
+</div>
+
+<!-- ══════════════ Pengaturan Pajak & Biaya Layanan ══════════════ -->
+<div class="card mt-4 mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Pengaturan Pajak & Biaya Layanan</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="kelola_menu.php">
+            <input type="hidden" name="aksi" value="simpan_biaya">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">Pajak (%)</label>
+                    <input type="number" name="pajak_persen" class="form-control"
+                           value="<?= $pajak_persen ?>" min="0" max="100" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Biaya Layanan (%)</label>
+                    <input type="number" name="biaya_layanan_persen" class="form-control"
+                           value="<?= $biaya_layanan_persen ?>" min="0" max="100" required>
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary w-100">Simpan Pengaturan</button>
+                </div>
+            </div>
+            <div class="text-muted small mt-2">Persentase ini akan diterapkan pada setiap pesanan di halaman checkout.</div>
+        </form>
     </div>
 </div>
 

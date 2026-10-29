@@ -11,6 +11,20 @@ if (!isset($_SESSION['id_user'])) {
 
 $id_user = $_SESSION['id_user'];
 
+// Cek apakah baru saja bayar QRIS
+$qris_order_id = (int) ($_GET['qris'] ?? 0);
+$qris_total    = 0;
+
+if ($qris_order_id > 0) {
+    $res_qris = mysqli_query($koneksi,
+        "SELECT total_harga FROM orders WHERE id_order = $qris_order_id AND id_user = $id_user AND metode_pembayaran = 'QRIS'"
+    );
+    $data_qris = mysqli_fetch_assoc($res_qris);
+    if ($data_qris) {
+        $qris_total = (int) $data_qris['total_harga'];
+    }
+}
+
 $query = "SELECT o.id_order, o.total_harga, o.metode_pembayaran, o.status_pesanan, o.created_at,
                  m.nama_menu, oi.jumlah, oi.subtotal
           FROM orders o
@@ -87,12 +101,64 @@ include 'includes/header.php';
                     </tbody>
                 </table>
             </div>
-            <div class="card-footer d-flex justify-content-between">
+            <div class="card-footer d-flex justify-content-between align-items-center">
                 <span>Pembayaran: <strong><?= $pesanan['metode_pembayaran'] ?></strong></span>
-                <span>Total: <strong>Rp <?= number_format($pesanan['total_harga'], 0, ',', '.') ?></strong></span>
+                <div class="d-flex align-items-center gap-2">
+                    <span>Total: <strong>Rp <?= number_format($pesanan['total_harga'], 0, ',', '.') ?></strong></span>
+                    <?php if ($pesanan['metode_pembayaran'] === 'QRIS' && $pesanan['status_pesanan'] === 'Pending'): ?>
+                        <button type="button" class="btn btn-sm btn-outline-primary"
+                                onclick="tampilkanQRIS(<?= $pesanan['total_harga'] ?>)">
+                            Tampilkan QRIS
+                        </button>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
     <?php } ?>
 </div>
+
+<!-- Modal QRIS -->
+<div class="modal fade" id="modalQRIS" tabindex="-1" aria-labelledby="labelQRIS" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="labelQRIS">Pembayaran QRIS</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            </div>
+            <div class="modal-body text-center">
+                <p class="text-muted mb-3">Scan kode QR di bawah ini untuk melakukan pembayaran</p>
+                <div class="mb-3">
+                    <img src="assets/qris.png" alt="Kode QRIS" class="img-fluid border rounded p-2" style="max-width:280px">
+                </div>
+                <div class="alert alert-info">
+                    <strong>Total yang harus dibayar:</strong><br>
+                    <span class="fs-4 fw-bold" id="qrisTotalBayar">Rp 0</span>
+                </div>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Selesai</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function formatRupiah(angka) {
+    return 'Rp ' + angka.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+function tampilkanQRIS(total) {
+    document.getElementById('qrisTotalBayar').textContent = formatRupiah(total);
+    var modal = new bootstrap.Modal(document.getElementById('modalQRIS'));
+    modal.show();
+}
+
+// Auto-show modal QRIS jika baru saja bayar QRIS
+<?php if ($qris_total > 0): ?>
+document.addEventListener('DOMContentLoaded', function() {
+    tampilkanQRIS(<?= $qris_total ?>);
+});
+<?php endif; ?>
+</script>
 
 <?php include 'includes/footer.php'; ?>
