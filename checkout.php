@@ -156,31 +156,62 @@ include 'includes/header.php';
                 <h5 class="card-title mb-3">Pilih Metode Pembayaran</h5>
                 <form method="POST" action="checkout.php">
                     <div class="mb-3">
-                        <div class="form-check border rounded p-3 mb-2">
-                            <input class="form-check-input" type="radio" name="metode_pembayaran"
-                                   id="metode_cash" value="Cash" checked>
-                            <label class="form-check-label fw-semibold" for="metode_cash">
-                                💵 Bayar Tunai di Kasir
-                            </label>
-                            <div class="text-muted small">Lakukan pembayaran langsung di kasir saat mengambil pesanan.</div>
-                        </div>
-                        <div class="form-check border rounded p-3">
-                            <input class="form-check-input" type="radio" name="metode_pembayaran"
-                                   id="metode_qris" value="QRIS">
-                            <label class="form-check-label fw-semibold" for="metode_qris">
-                                📱 QRIS
-                            </label>
-                            <div class="text-muted small">Scan kode QRIS untuk pembayaran digital.</div>
-                        </div>
+                        <label class="d-block mb-2 metode-card" style="cursor:pointer">
+                            <input class="d-none" type="radio" name="metode_pembayaran" value="Cash" checked>
+                            <div class="border rounded-3 p-4 d-flex align-items-center gap-3 metode-card-inner" style="border-width:2px!important;transition:all .15s ease">
+                                <div class="d-flex align-items-center justify-content-center rounded-3 bg-success bg-opacity-10" style="width:56px;height:56px;flex-shrink:0">
+                                    <span style="font-size:1.8rem">💵</span>
+                                </div>
+                                <div>
+                                    <div class="fw-bold fs-5">Bayar Tunai di Kasir</div>
+                                    <div class="text-muted">Lakukan pembayaran langsung di kasir saat mengambil pesanan.</div>
+                                </div>
+                            </div>
+                        </label>
+                        <label class="d-block metode-card" style="cursor:pointer">
+                            <input class="d-none" type="radio" name="metode_pembayaran" value="QRIS">
+                            <div class="border rounded-3 p-4 d-flex align-items-center gap-3 metode-card-inner" style="border-width:2px!important;transition:all .15s ease">
+                                <div class="d-flex align-items-center justify-content-center rounded-3 bg-primary bg-opacity-10" style="width:56px;height:56px;flex-shrink:0">
+                                    <span style="font-size:1.8rem">📱</span>
+                                </div>
+                                <div>
+                                    <div class="fw-bold fs-5">QRIS</div>
+                                    <div class="text-muted">Scan kode QRIS untuk pembayaran digital.</div>
+                                </div>
+                            </div>
+                        </label>
                     </div>
 
                     <div class="d-flex gap-2">
-                        <button type="submit" name="bayar" class="btn btn-primary flex-fill">Bayar Sekarang</button>
-                        <a href="index.php" class="btn btn-outline-secondary">Kembali</a>
+                        <button type="submit" name="bayar" class="btn btn-primary btn-lg flex-fill">Bayar Sekarang</button>
+                        <a href="index.php" class="btn btn-outline-secondary btn-lg">Kembali</a>
                     </div>
                 </form>
             </div>
         </div>
+
+        <!-- Script: highlight card pembayaran yang dipilih -->
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            function updateMetodeHighlight() {
+                document.querySelectorAll('.metode-card').forEach(function(card) {
+                    const radio = card.querySelector('input[type="radio"]');
+                    const inner = card.querySelector('.metode-card-inner');
+                    if (radio.checked) {
+                        inner.style.borderColor = '#0d6efd';
+                        inner.style.backgroundColor = '#f0f6ff';
+                    } else {
+                        inner.style.borderColor = '#dee2e6';
+                        inner.style.backgroundColor = '';
+                    }
+                });
+            }
+            updateMetodeHighlight();
+            document.querySelectorAll('.metode-card input[type="radio"]').forEach(function(radio) {
+                radio.addEventListener('change', updateMetodeHighlight);
+            });
+        });
+        </script>
     </div>
 </div>
 
