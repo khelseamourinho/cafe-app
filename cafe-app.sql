@@ -15,7 +15,7 @@ CREATE TABLE users (
 CREATE TABLE menus (
 	id_menu INT AUTO_INCREMENT PRIMARY KEY,
     nama_menu VARCHAR (100) NOT NULL,
-    kategori VARCHAR (30) NOT NULL,
+    kategori ENUM('coffe', 'non_coffe', 'pastry_and_dessert', 'rice_bowl', 'pasta', 'snack') NOT NULL,
     harga INT NOT NULL,
     deskripsi TEXT,
     gambar VARCHAR (255) NULL
@@ -29,7 +29,7 @@ CREATE TABLE orders (
     metode_pembayaran ENUM('Cash', 'QRIS') NOT NULL,
     status_pesanan ENUM('Pending', 'Sedang Dibuat', 'Siap Pick-up', 'Selesai') NOT NULL DEFAULT 'Pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    ALTER TABLE orders ADD tipe_order ENUM('dine_in', 'take_away') NOT NULL;
+    tipe_order ENUM('dine_in', 'take_away') NOT NULL,
     FOREIGN KEY (id_user) REFERENCES users(id_user) ON DELETE CASCADE
 );
 
@@ -44,23 +44,20 @@ CREATE TABLE order_items (
     FOREIGN KEY (id_menu) REFERENCES menus(id_menu) ON DELETE RESTRICT
 );
 
+CREATE TABLE banner (
+    id_image INT AUTO_INCREMENT PRIMARY KEY,
+    gambar VARCHAR(255) NOT NULL,  
+    keterangan ENUM('carousel_banner', 'popup_banner' ) NOT NULL,
+    urutan INT (2) DEFAULT 0 NOT NULL,
+    status TINYINT(1) DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+CREATE TABLE banner (
+    id_image INT AUTO_INCREMENT PRIMARY KEY,
+    gambar VARCHAR(255) NOT NULL,  
+    keterangan ENUM('carousel_banner', 'popup_banner') NOT NULL,
+    urutan INT(2) DEFAULT 0 NOT NULL,
+    status TINYINT(1) DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
