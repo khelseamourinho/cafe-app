@@ -90,10 +90,12 @@ html { scroll-behavior: smooth; }
 /* Nav pills kategori tidak wrap di mobile */
 .kategori-nav { scrollbar-width: none; }
 .kategori-nav::-webkit-scrollbar { display: none; }
-/* Card menu: gambar lebih kecil */
-.menu-card-img { height: 160px; object-fit: cover; width: 100%; }
+/* Card menu: gambar mengikuti ukuran asli */
+.menu-card-img { width: 100%; height: auto; display: block; }
 /* Placeholder gambar */
-.img-placeholder { height: 160px; background: #f8f9fa; display:flex; align-items:center; justify-content:center; }
+.img-placeholder { aspect-ratio: 4/3; min-height: 140px; background: #f8f9fa; display:flex; align-items:center; justify-content:center; }
+/* Scroll offset agar judul seksi tidak tertutup sticky header + kategori */
+section[id^="kat-"] { scroll-margin-top: 115px; }
 </style>
 
 <?php if ($tampil_popup && $popup): ?>
@@ -170,7 +172,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 <!-- ═══ STICKY CATEGORY NAV-PILLS ════════════════════════════════════════════ -->
 <div class="sticky-top bg-white border-bottom py-2 mb-4" style="top:56px; z-index:900;">
-    <ul class="nav nav-pills kategori-nav flex-nowrap overflow-auto gap-1 mb-0 px-0">
+    <ul class="nav nav-pills kategori-nav flex-wrap justify-content-center gap-1 mb-0 px-0">
         <?php foreach ($label_kategori as $key => $info): ?>
         <li class="nav-item">
             <a class="nav-link py-1 px-3 small" href="#<?= $info['id'] ?>">
