@@ -21,7 +21,7 @@ if (!isset($base_path)) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-<nav class="navbar bg-body-tertiary border-bottom">
+<nav class="navbar bg-body-tertiary border-bottom sticky-top">
     <div class="container d-flex justify-content-between align-items-center">
 
         <a class="navbar-brand d-flex align-items-center" href="<?= $base_path ?>index.php">
