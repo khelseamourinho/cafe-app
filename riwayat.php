@@ -241,7 +241,7 @@ include 'includes/header.php';
             <div class="modal-body text-center py-3">
                 <p class="text-muted mb-2 small">Scan kode QR di bawah ini untuk melakukan pembayaran</p>
                 <div class="mb-2">
-                    <img src="assets/qris.png" alt="Kode QRIS" class="img-fluid border rounded p-2" style="max-width:220px">
+                    <img src="assets/static/qris.png" alt="Kode QRIS" class="img-fluid border rounded p-2" style="max-width:220px">
                 </div>
                 <div class="alert alert-info py-2 mb-0">
                     <strong class="small">Total yang harus dibayar:</strong><br>
@@ -350,7 +350,7 @@ function renderDetail(d, container) {
     var menuSection = '<h6 class="fw-bold mb-2">Pesanan</h6><div class="mb-3">';
     for (var j = 0; j < d.items.length; j++) {
         var item = d.items[j];
-        var imgSrc = item.gambar ? item.gambar : 'assets/logo.jpeg';
+        var imgSrc = item.gambar ? item.gambar : 'assets/static/logo.jpeg';
 
         menuSection += '<div class="detail-item-row">';
         menuSection += '  <img src="' + imgSrc + '" alt="" class="detail-item-img">';
