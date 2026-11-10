@@ -15,11 +15,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_order'], $_POST['s
 
     $status_valid = ['Pending', 'Sedang Dibuat', 'Siap Pick-up', 'Selesai'];
     if (!in_array($status_baru, $status_valid)) {
+        // Jika request AJAX, kembalikan error JSON
+        $is_ajax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
+                   strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+        if ($is_ajax) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Status tidak valid.']);
+            exit;
+        }
         die('Status tidak valid.');
     }
 
     // Ambil status sekarang untuk validasi alur
-    $res_cek   = mysqli_query($koneksi, "SELECT status_pesanan FROM orders WHERE id_order = $id_order");
+    $res_cek     = mysqli_query($koneksi, "SELECT status_pesanan FROM orders WHERE id_order = $id_order");
     $status_lama = mysqli_fetch_assoc($res_cek)['status_pesanan'] ?? '';
 
     // Aturan: tidak bisa mundur ke status sebelumnya, tidak bisa ubah yang sudah Selesai
@@ -31,12 +39,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_order'], $_POST['s
         $error_status = 'Status tidak dapat dimundurkan dari "' . $status_lama . '" ke "' . $status_baru . '".';
     }
 
+    // Pemetaan badge Bootstrap sesuai status
+    $warna_badge = [
+        'Pending'       => 'bg-warning text-dark',
+        'Sedang Dibuat' => 'bg-info text-dark',
+        'Siap Pick-up'  => 'bg-primary',
+        'Selesai'       => 'bg-success'
+    ];
+
+    // ─── Deteksi apakah request ini berasal dari AJAX ───────────────────────
+    $is_ajax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
+               strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+
     if ($error_status === '') {
         mysqli_query($koneksi,
             "UPDATE orders SET status_pesanan = '$status_baru' WHERE id_order = $id_order"
         ) or die(mysqli_error($koneksi));
+
+        if ($is_ajax) {
+            // Response JSON untuk AJAX: kirim data yang dibutuhkan JS untuk update DOM
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success'     => true,
+                'message'     => 'Status pesanan berhasil diperbarui.',
+                'id_order'    => $id_order,
+                'status_baru' => $status_baru,
+                'badge_class' => $warna_badge[$status_baru],
+            ]);
+            exit;
+        }
+        // Fallback untuk non-AJAX (jika JS disabled)
         header('Location: kelola_pesanan.php?pesan=update');
     } else {
+        if ($is_ajax) {
+            header('Content-Type: application/json');
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => $error_status]);
+            exit;
+        }
         header('Location: kelola_pesanan.php?pesan=error&detail=' . urlencode($error_status));
     }
     exit;
@@ -90,30 +130,55 @@ require '../includes/header.php';
 <p class="text-muted mb-4">Pantau dan perbarui status pesanan customer.</p>
 
 <?php if ($pesan === 'update'): ?>
-    <div class="alert alert-success alert-dismissible fade show">
+    <div class="alert alert-success alert-dismissible fade show" id="alertPesanServer">
         Status pesanan berhasil diperbarui.
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 <?php elseif ($pesan === 'error'): ?>
-    <div class="alert alert-danger alert-dismissible fade show">
+    <div class="alert alert-danger alert-dismissible fade show" id="alertPesanServer">
         <?= htmlspecialchars($detail_error) ?>
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 <?php endif; ?>
 
-<!-- Filter Status -->
-<div class="mb-3 d-flex gap-2 flex-wrap">
-    <a href="kelola_pesanan.php"
-       class="btn btn-sm <?= $filter_status === '' ? 'btn-dark' : 'btn-outline-dark' ?>">Semua</a>
-    <?php foreach ($status_list as $st): ?>
-        <a href="?status=<?= urlencode($st) ?>"
-           class="btn btn-sm <?= $filter_status === $st ? 'btn-dark' : 'btn-outline-secondary' ?>">
-            <?= $st ?>
-        </a>
-    <?php endforeach; ?>
+<!-- ─── Alert AJAX (disembunyikan secara default, ditampilkan oleh JS) ──────── -->
+<div id="alertAjax" class="alert alert-dismissible fade show d-none" role="alert">
+    <span id="alertAjaxMsg"></span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
 </div>
 
-<!-- Daftar Pesanan -->
+<!-- ─── Filter Status + Tombol Refresh Manual ────────────────────────────────── -->
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+
+    <!-- Filter Status (tetap seperti semula) -->
+    <div class="d-flex gap-2 flex-wrap" id="filterStatusGroup">
+        <a href="kelola_pesanan.php"
+           class="btn btn-sm <?= $filter_status === '' ? 'btn-dark' : 'btn-outline-dark' ?>">Semua</a>
+        <?php foreach ($status_list as $st): ?>
+            <a href="?status=<?= urlencode($st) ?>"
+               class="btn btn-sm <?= $filter_status === $st ? 'btn-dark' : 'btn-outline-secondary' ?>">
+                <?= $st ?>
+            </a>
+        <?php endforeach; ?>
+    </div>
+
+    <!-- ─── Tombol Refresh Manual: Kontras & Jelas ───────────────────────────── -->
+    <button type="button" id="btnManualRefresh"
+            class="btn btn-warning fw-semibold shadow-sm d-flex align-items-center gap-2"
+            title="Segarkan daftar pesanan tanpa reload halaman">
+        <!-- Ikon refresh Bootstrap Icons (SVG inline agar bisa dianimasikan) -->
+        <svg id="iconRefresh" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+             fill="currentColor" viewBox="0 0 16 16" style="transition: transform 0.5s ease;">
+            <path fill-rule="evenodd"
+                  d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
+            <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/>
+        </svg>
+        Segarkan Pesanan
+    </button>
+</div>
+
+<!-- ─── Daftar Pesanan (container ini yang di-refresh parsial oleh AJAX) ─────── -->
+<div id="daftarPesananContainer">
 <?php if (empty($daftar_order)): ?>
     <div class="alert alert-info">
         Tidak ada pesanan<?= $filter_status ? ' dengan status <strong>' . htmlspecialchars($filter_status) . '</strong>' : '' ?>.
@@ -124,7 +189,8 @@ require '../includes/header.php';
     $urutan_status = array_flip($status_list);
     $sudah_selesai = $order['status_pesanan'] === 'Selesai';
 ?>
-<div class="card mb-3">
+<!-- Kartu pesanan: diberi id unik dan data-status untuk manipulasi DOM via JS -->
+<div class="card mb-3" id="order-card-<?= $order['id_order'] ?>" data-status="<?= htmlspecialchars($order['status_pesanan']) ?>">
     <div class="card-header d-flex justify-content-between align-items-start flex-wrap gap-2">
         <div>
             <strong>Pesanan #<?= $order['id_order'] ?></strong>
@@ -138,7 +204,8 @@ require '../includes/header.php';
             &nbsp;·&nbsp;
             <small class="text-muted"><?= $order['metode_pembayaran'] ?></small>
         </div>
-        <span class="badge <?= $warna_badge[$order['status_pesanan']] ?> fs-6">
+        <!-- Badge status: diberi id unik agar bisa diupdate DOM tanpa reload -->
+        <span class="badge <?= $warna_badge[$order['status_pesanan']] ?> fs-6" id="badge-<?= $order['id_order'] ?>">
             <?= $order['status_pesanan'] ?>
         </span>
     </div>
@@ -176,8 +243,9 @@ require '../includes/header.php';
         <?php if ($sudah_selesai): ?>
             <p class="text-muted small mb-0">✅ Pesanan ini sudah selesai dan tidak dapat diubah.</p>
         <?php else: ?>
-            <form method="POST" action="kelola_pesanan.php"
-                  onsubmit="return konfirmasiStatus(this)">
+            <!-- Form AJAX: onsubmit dicegat oleh JS, tidak akan reload halaman -->
+            <form method="POST" action="kelola_pesanan.php" class="form-ubah-status"
+                  data-order-id="<?= $order['id_order'] ?>">
                 <input type="hidden" name="id_order" value="<?= $order['id_order'] ?>">
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                     <label class="form-label mb-0 me-1 text-nowrap fw-semibold">Ubah Status:</label>
@@ -190,20 +258,182 @@ require '../includes/header.php';
                             </option>
                         <?php endforeach; ?>
                     </select>
-                    <button type="submit" class="btn btn-sm btn-primary">Simpan</button>
+                    <button type="submit" class="btn btn-sm btn-primary btn-simpan-status">Simpan</button>
                 </div>
             </form>
         <?php endif; ?>
     </div>
 </div>
 <?php endforeach; ?>
+</div><!-- /#daftarPesananContainer -->
 
 <script>
-function konfirmasiStatus(form) {
-    const select     = form.querySelector('select[name="status_pesanan"]');
-    const statusBaru = select.options[select.selectedIndex].text;
-    return confirm('Yakin ingin mengubah status pesanan ini menjadi "' + statusBaru + '"?');
+/* ═══════════════════════════════════════════════════════════════════════════
+   kelola_pesanan.php — JavaScript AJAX
+   1. AJAX Submit Status  : ubah status tanpa reload, scroll tetap stabil
+   2. AJAX Refresh Manual : tombol Segarkan Pesanan, scroll tetap stabil
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+// ─── Pemetaan warna badge (mirror dari PHP $warna_badge) ─────────────────────
+const WARNA_BADGE = {
+    'Pending'      : 'bg-warning text-dark',
+    'Sedang Dibuat': 'bg-info text-dark',
+    'Siap Pick-up' : 'bg-primary',
+    'Selesai'      : 'bg-success'
+};
+
+// ─── Helper: tampilkan alert AJAX sementara ──────────────────────────────────
+function tampilkanAlert(pesan, tipe) {
+    var alertEl  = document.getElementById('alertAjax');
+    var alertMsg = document.getElementById('alertAjaxMsg');
+    // Hapus kelas warna sebelumnya
+    alertEl.classList.remove('alert-success', 'alert-danger', 'alert-warning', 'd-none');
+    alertEl.classList.add('alert-' + tipe);
+    alertMsg.textContent = pesan;
+    // Auto-dismiss setelah 4 detik
+    setTimeout(function() {
+        alertEl.classList.add('d-none');
+    }, 4000);
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   FITUR 1 — AJAX Submit Status (tanpa reload, scroll stabil)
+   ═══════════════════════════════════════════════════════════════ */
+document.addEventListener('submit', function(e) {
+    // Tangkap hanya form dengan class .form-ubah-status
+    if (!e.target.classList.contains('form-ubah-status')) return;
+    e.preventDefault(); // Hentikan submit konvensional (cegah reload halaman)
+
+    var form      = e.target;
+    var select    = form.querySelector('select[name="status_pesanan"]');
+    var statusBaru = select.options[select.selectedIndex].text;
+    var orderId   = form.dataset.orderId;
+
+    // Konfirmasi sebelum menyimpan (sama seperti behavior lama)
+    if (!confirm('Yakin ingin mengubah status pesanan #' + orderId + ' menjadi "' + statusBaru + '"?')) {
+        return;
+    }
+
+    // Nonaktifkan tombol agar tidak diklik ganda
+    var btnSimpan = form.querySelector('.btn-simpan-status');
+    btnSimpan.disabled  = true;
+    btnSimpan.textContent = 'Menyimpan...';
+
+    var formData = new FormData(form);
+
+    // Kirim request AJAX ke backend yang sama
+    fetch('kelola_pesanan.php', {
+        method : 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }, // Penanda AJAX untuk PHP
+        body   : formData
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+        if (data.success) {
+            // ── Update badge warna & teks secara instan ──────────────────
+            var badgeEl = document.getElementById('badge-' + data.id_order);
+            if (badgeEl) {
+                // Hapus semua class warna badge lama
+                badgeEl.className = 'badge fs-6 ' + (WARNA_BADGE[data.status_baru] || 'bg-secondary');
+                badgeEl.textContent = data.status_baru;
+            }
+            // Update atribut data-status pada kartu
+            var cardEl = document.getElementById('order-card-' + data.id_order);
+            if (cardEl) {
+                cardEl.dataset.status = data.status_baru;
+            }
+            // Nonaktifkan opsi status yang sudah terlewati pada <select>
+            var statusUrutan = ['Pending', 'Sedang Dibuat', 'Siap Pick-up', 'Selesai'];
+            var idxBaru = statusUrutan.indexOf(data.status_baru);
+            var opts = select.options;
+            for (var i = 0; i < opts.length; i++) {
+                if (statusUrutan.indexOf(opts[i].value) < idxBaru) {
+                    opts[i].disabled = true;
+                }
+            }
+            // Jika status sudah Selesai, sembunyikan form dan tampilkan teks
+            if (data.status_baru === 'Selesai') {
+                var formWrapper = form.closest('.card-body');
+                if (formWrapper) {
+                    form.outerHTML = '<p class="text-muted small mb-0">✅ Pesanan ini sudah selesai dan tidak dapat diubah.</p>';
+                }
+            }
+            tampilkanAlert('✅ ' + data.message, 'success');
+        } else {
+            tampilkanAlert('❌ ' + (data.message || 'Gagal memperbarui status.'), 'danger');
+            btnSimpan.disabled   = false;
+            btnSimpan.textContent = 'Simpan';
+        }
+    })
+    .catch(function() {
+        tampilkanAlert('❌ Gagal menghubungi server. Periksa koneksi Anda.', 'danger');
+        btnSimpan.disabled   = false;
+        btnSimpan.textContent = 'Simpan';
+    });
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   FITUR 2 — AJAX Refresh Manual (Tombol Segarkan Pesanan)
+   Memperbarui #daftarPesananContainer tanpa reload browser.
+   Posisi scroll admin dipertahankan setelah refresh parsial.
+   ═══════════════════════════════════════════════════════════════ */
+var sedangRefresh = false; // Flag: cegah klik ganda saat loading
+
+document.getElementById('btnManualRefresh').addEventListener('click', function() {
+    if (sedangRefresh) return; // Abaikan spam klik
+    sedangRefresh = true;
+
+    var btn      = this;
+    var iconSvg  = document.getElementById('iconRefresh');
+
+    // Animasi putaran pada ikon refresh
+    iconSvg.style.transform    = 'rotate(360deg)';
+    iconSvg.style.transition   = 'transform 0.6s ease';
+    btn.disabled               = true;
+
+    // Simpan posisi scroll saat ini sebelum update DOM
+    var savedScrollTop = window.scrollY || document.documentElement.scrollTop;
+
+    // Baca filter aktif dari URL agar refresh tetap mempertahankan filter
+    var currentUrl = window.location.search; // contoh: "?status=Pending"
+
+    // Ambil HTML halaman yang sama dengan filter aktif
+    fetch('kelola_pesanan.php' + currentUrl, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest-PartialRefresh' }
+        // Catatan: header ini hanya untuk logging; PHP tetap merender halaman penuh
+    })
+    .then(function(res) { return res.text(); })
+    .then(function(html) {
+        // Parsing HTML dengan DOMParser (aman, tanpa eval)
+        var parser  = new DOMParser();
+        var doc     = parser.parseFromString(html, 'text/html');
+
+        // Ambil hanya konten #daftarPesananContainer dari halaman baru
+        var newContainer = doc.getElementById('daftarPesananContainer');
+        var oldContainer = document.getElementById('daftarPesananContainer');
+
+        if (newContainer && oldContainer) {
+            oldContainer.innerHTML = newContainer.innerHTML;
+        }
+
+        // ── Kembalikan posisi scroll ke koordinat semula ──────────────────
+        window.scrollTo({ top: savedScrollTop, behavior: 'instant' });
+
+        tampilkanAlert('🔄 Daftar pesanan telah diperbarui.', 'success');
+    })
+    .catch(function() {
+        tampilkanAlert('❌ Gagal memuat ulang daftar pesanan.', 'danger');
+    })
+    .finally(function() {
+        // Reset animasi ikon dan aktifkan kembali tombol
+        setTimeout(function() {
+            iconSvg.style.transform = 'rotate(0deg)';
+            iconSvg.style.transition = 'transform 0s';
+        }, 100);
+        btn.disabled  = false;
+        sedangRefresh = false;
+    });
+});
 </script>
 
 <?php require '../includes/footer.php'; ?>
