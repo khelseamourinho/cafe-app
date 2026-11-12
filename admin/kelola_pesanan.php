@@ -129,22 +129,56 @@ require '../includes/header.php';
 <h1 class="h3 mb-1">Kelola Pesanan</h1>
 <p class="text-muted mb-4">Pantau dan perbarui status pesanan customer.</p>
 
-<?php if ($pesan === 'update'): ?>
-    <div class="alert alert-success alert-dismissible fade show" id="alertPesanServer">
-        Status pesanan berhasil diperbarui.
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-<?php elseif ($pesan === 'error'): ?>
-    <div class="alert alert-danger alert-dismissible fade show" id="alertPesanServer">
-        <?= htmlspecialchars($detail_error) ?>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-<?php endif; ?>
 
-<!-- ─── Alert AJAX (disembunyikan secara default, ditampilkan oleh JS) ──────── -->
-<div id="alertAjax" class="alert alert-dismissible fade show d-none" role="alert">
-    <span id="alertAjaxMsg"></span>
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+<!-- ══════ POP-UP MODAL KONFIRMASI UBAH STATUS PESANAN ══════════════════════ -->
+<!--
+    Modal ini ditampilkan saat admin menekan tombol "Simpan" pada form ubah status.
+    Data pesanan (nomor, nama customer, status lama, status baru) diinjeksikan oleh JS.
+    Eksekusi AJAX Fetch hanya dikirim setelah admin mengklik tombol konfirmasi di sini.
+-->
+<div class="modal fade" id="modalKonfirmasiStatus" tabindex="-1" aria-labelledby="labelKonfirmasiStatus" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+        <div class="modal-content border-0 shadow-lg rounded-3">
+            <div class="modal-header border-bottom-0 pb-0">
+                <h5 class="modal-title fw-bold" id="labelKonfirmasiStatus">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="text-warning me-2 mb-1" viewBox="0 0 16 16">
+                        <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/>
+                    </svg>
+                    Konfirmasi Perubahan Status
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            </div>
+            <div class="modal-body pt-2 pb-3">
+                <p class="text-muted mb-3 small">Pastikan kamu sudah memilih status yang tepat sebelum melanjutkan.</p>
+                <div class="rounded-3 border p-3 bg-light mb-0">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted small">Nomor Pesanan</span>
+                        <strong id="konfirm-id-order">—</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted small">Customer</span>
+                        <strong id="konfirm-nama-customer">—</strong>
+                    </div>
+                    <hr class="my-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted small">Status saat ini</span>
+                        <span id="konfirm-status-lama" class="badge fs-6">—</span>
+                    </div>
+                    <div class="text-center text-muted my-2" style="font-size: 1.3rem;">↓</div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted small fw-semibold">Status baru</span>
+                        <span id="konfirm-status-baru" class="badge fs-6">—</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-top-0 pt-0 gap-2">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-primary" id="btnKonfirmasiUbahStatus">
+                    Ya, Ubah Status
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- ─── Filter Status + Tombol Refresh Manual ────────────────────────────────── -->
@@ -282,46 +316,94 @@ const WARNA_BADGE = {
     'Selesai'      : 'bg-success'
 };
 
-// ─── Helper: tampilkan alert AJAX sementara ──────────────────────────────────
-function tampilkanAlert(pesan, tipe) {
-    var alertEl  = document.getElementById('alertAjax');
-    var alertMsg = document.getElementById('alertAjaxMsg');
-    // Hapus kelas warna sebelumnya
-    alertEl.classList.remove('alert-success', 'alert-danger', 'alert-warning', 'd-none');
-    alertEl.classList.add('alert-' + tipe);
-    alertMsg.textContent = pesan;
-    // Auto-dismiss setelah 4 detik
-    setTimeout(function() {
-        alertEl.classList.add('d-none');
-    }, 4000);
+/* ═══════════════════════════════════════════════════════════════════════
+   VARIABEL KONTEKS MODAL KONFIRMASI
+   Menyimpan referensi form aktif & FormData saat modal konfirmasi terbuka,
+   agar bisa digunakan oleh handler tombol konfirmasi di dalam modal.
+   ═══════════════════════════════════════════════════════════════════════ */
+var _formAktif      = null;  // Form .form-ubah-status yang sedang dikonfirmasi
+var _formDataAktif  = null;  // FormData dari form tersebut
+var _selectAktif    = null;  // Elemen <select> dari form tersebut
+var _btnSimpanAktif = null;  // Tombol simpan pada form tersebut
+var _statusSebelumnya = null; // Nilai select sebelum diganti (untuk reset saat batal)
+
+// Referensi elemen Modal Bootstrap
+var modalKonfirmasiEl = document.getElementById('modalKonfirmasiStatus');
+var bsModalKonfirmasi = new bootstrap.Modal(modalKonfirmasiEl);
+
+/* ═══════════════════════════════════════════════════════════════════════
+   HELPER: Dapatkan label & class badge berdasarkan nilai status
+   ═══════════════════════════════════════════════════════════════════════ */
+function getBadgeClass(status) {
+    return WARNA_BADGE[status] || 'bg-secondary';
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   FITUR 1 — AJAX Submit Status (tanpa reload, scroll stabil)
-   ═══════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════════
+   FITUR 1 — AJAX Submit Status dengan Pop-up Modal Konfirmasi
+   Menggantikan window.confirm() lama dengan modal Bootstrap interaktif.
+   ═══════════════════════════════════════════════════════════════════════ */
 document.addEventListener('submit', function(e) {
     // Tangkap hanya form dengan class .form-ubah-status
     if (!e.target.classList.contains('form-ubah-status')) return;
-    e.preventDefault(); // Hentikan submit konvensional (cegah reload halaman)
+    e.preventDefault(); // Cegah submit konvensional (cegah reload halaman)
 
-    var form      = e.target;
-    var select    = form.querySelector('select[name="status_pesanan"]');
-    var statusBaru = select.options[select.selectedIndex].text;
-    var orderId   = form.dataset.orderId;
+    var form       = e.target;
+    var select     = form.querySelector('select[name="status_pesanan"]');
+    var orderId    = form.dataset.orderId;
+    var statusBaru = select.value;
 
-    // Konfirmasi sebelum menyimpan (sama seperti behavior lama)
-    if (!confirm('Yakin ingin mengubah status pesanan #' + orderId + ' menjadi "' + statusBaru + '"?')) {
-        return;
+    // Simpan referensi ke konteks modal
+    _formAktif        = form;
+    _formDataAktif    = new FormData(form);
+    _selectAktif      = select;
+    _btnSimpanAktif   = form.querySelector('.btn-simpan-status');
+
+    // Cari status lama dari data-status pada kartu pesanan
+    var cardEl     = document.getElementById('order-card-' + orderId);
+    var statusLama = cardEl ? cardEl.dataset.status : '—';
+
+    // Ambil nama customer dari kartu pesanan (dari elemen span dalam card-header)
+    var namaCustomer = '—';
+    if (cardEl) {
+        var spanCustomer = cardEl.querySelector('.card-header span');
+        if (spanCustomer) namaCustomer = spanCustomer.textContent.trim();
     }
 
+    // Injeksi data ke dalam body modal
+    document.getElementById('konfirm-id-order').textContent      = '#' + orderId;
+    document.getElementById('konfirm-nama-customer').textContent = namaCustomer;
+
+    var konfirmStatusLama = document.getElementById('konfirm-status-lama');
+    konfirmStatusLama.className = 'badge fs-6 ' + getBadgeClass(statusLama);
+    konfirmStatusLama.textContent = statusLama;
+
+    var konfirmStatusBaru = document.getElementById('konfirm-status-baru');
+    konfirmStatusBaru.className = 'badge fs-6 ' + getBadgeClass(statusBaru);
+    konfirmStatusBaru.textContent = statusBaru;
+
+    // Tampilkan modal konfirmasi
+    bsModalKonfirmasi.show();
+});
+
+/* ─── Handler tombol "Ya, Ubah Status" di dalam modal ──────────────────────── */
+document.getElementById('btnKonfirmasiUbahStatus').addEventListener('click', function() {
+    // Tutup modal terlebih dahulu
+    bsModalKonfirmasi.hide();
+
+    // Pastikan konteks form masih valid
+    if (!_formAktif || !_formDataAktif || !_selectAktif || !_btnSimpanAktif) return;
+
+    var form      = _formAktif;
+    var formData  = _formDataAktif;
+    var select    = _selectAktif;
+    var btnSimpan = _btnSimpanAktif;
+    var orderId   = form.dataset.orderId;
+
     // Nonaktifkan tombol agar tidak diklik ganda
-    var btnSimpan = form.querySelector('.btn-simpan-status');
-    btnSimpan.disabled  = true;
+    btnSimpan.disabled    = true;
     btnSimpan.textContent = 'Menyimpan...';
 
-    var formData = new FormData(form);
-
-    // Kirim request AJAX ke backend yang sama
+    // Kirim request AJAX ke backend
     fetch('kelola_pesanan.php', {
         method : 'POST',
         headers: { 'X-Requested-With': 'XMLHttpRequest' }, // Penanda AJAX untuk PHP
@@ -333,8 +415,7 @@ document.addEventListener('submit', function(e) {
             // ── Update badge warna & teks secara instan ──────────────────
             var badgeEl = document.getElementById('badge-' + data.id_order);
             if (badgeEl) {
-                // Hapus semua class warna badge lama
-                badgeEl.className = 'badge fs-6 ' + (WARNA_BADGE[data.status_baru] || 'bg-secondary');
+                badgeEl.className   = 'badge fs-6 ' + (WARNA_BADGE[data.status_baru] || 'bg-secondary');
                 badgeEl.textContent = data.status_baru;
             }
             // Update atribut data-status pada kartu
@@ -344,32 +425,43 @@ document.addEventListener('submit', function(e) {
             }
             // Nonaktifkan opsi status yang sudah terlewati pada <select>
             var statusUrutan = ['Pending', 'Sedang Dibuat', 'Siap Pick-up', 'Selesai'];
-            var idxBaru = statusUrutan.indexOf(data.status_baru);
-            var opts = select.options;
+            var idxBaru      = statusUrutan.indexOf(data.status_baru);
+            var opts         = select.options;
             for (var i = 0; i < opts.length; i++) {
                 if (statusUrutan.indexOf(opts[i].value) < idxBaru) {
                     opts[i].disabled = true;
                 }
             }
-            // Jika status sudah Selesai, sembunyikan form dan tampilkan teks
+            // Jika status sudah Selesai, sembunyikan form dan tampilkan teks pengunci
             if (data.status_baru === 'Selesai') {
-                var formWrapper = form.closest('.card-body');
-                if (formWrapper) {
-                    form.outerHTML = '<p class="text-muted small mb-0">✅ Pesanan ini sudah selesai dan tidak dapat diubah.</p>';
-                }
+                form.outerHTML = '<p class="text-muted small mb-0">✅ Pesanan ini sudah selesai dan tidak dapat diubah.</p>';
             }
-            tampilkanAlert('✅ ' + data.message, 'success');
+            // Tampilkan Pop-up Toast sukses (menggantikan alert statis)
+            tampilkanToast('✅ ' + data.message, 'success');
         } else {
-            tampilkanAlert('❌ ' + (data.message || 'Gagal memperbarui status.'), 'danger');
-            btnSimpan.disabled   = false;
+            // Tampilkan Pop-up Toast error
+            tampilkanToast('❌ ' + (data.message || 'Gagal memperbarui status.'), 'danger', 5000);
+            btnSimpan.disabled    = false;
             btnSimpan.textContent = 'Simpan';
         }
+        // Reset konteks setelah selesai
+        _formAktif = _formDataAktif = _selectAktif = _btnSimpanAktif = null;
     })
     .catch(function() {
-        tampilkanAlert('❌ Gagal menghubungi server. Periksa koneksi Anda.', 'danger');
-        btnSimpan.disabled   = false;
+        tampilkanToast('❌ Gagal menghubungi server. Periksa koneksi Anda.', 'danger', 5000);
+        btnSimpan.disabled    = false;
         btnSimpan.textContent = 'Simpan';
+        _formAktif = _formDataAktif = _selectAktif = _btnSimpanAktif = null;
     });
+});
+
+/* ─── Reset konteks saat modal ditutup via tombol Batal / klik luar ──────────
+   Mencegah eksekusi AJAX tidak sengaja jika modal ditutup tanpa konfirmasi. */
+modalKonfirmasiEl.addEventListener('hidden.bs.modal', function() {
+    // Jika ditutup tanpa mengklik tombol konfirmasi, reset semua state
+    if (_formAktif !== null) {
+        _formAktif = _formDataAktif = _selectAktif = _btnSimpanAktif = null;
+    }
 });
 
 /* ═══════════════════════════════════════════════════════════════
@@ -383,13 +475,13 @@ document.getElementById('btnManualRefresh').addEventListener('click', function()
     if (sedangRefresh) return; // Abaikan spam klik
     sedangRefresh = true;
 
-    var btn      = this;
-    var iconSvg  = document.getElementById('iconRefresh');
+    var btn     = this;
+    var iconSvg = document.getElementById('iconRefresh');
 
     // Animasi putaran pada ikon refresh
-    iconSvg.style.transform    = 'rotate(360deg)';
-    iconSvg.style.transition   = 'transform 0.6s ease';
-    btn.disabled               = true;
+    iconSvg.style.transform  = 'rotate(360deg)';
+    iconSvg.style.transition = 'transform 0.6s ease';
+    btn.disabled             = true;
 
     // Simpan posisi scroll saat ini sebelum update DOM
     var savedScrollTop = window.scrollY || document.documentElement.scrollTop;
@@ -400,13 +492,12 @@ document.getElementById('btnManualRefresh').addEventListener('click', function()
     // Ambil HTML halaman yang sama dengan filter aktif
     fetch('kelola_pesanan.php' + currentUrl, {
         headers: { 'X-Requested-With': 'XMLHttpRequest-PartialRefresh' }
-        // Catatan: header ini hanya untuk logging; PHP tetap merender halaman penuh
     })
     .then(function(res) { return res.text(); })
     .then(function(html) {
         // Parsing HTML dengan DOMParser (aman, tanpa eval)
-        var parser  = new DOMParser();
-        var doc     = parser.parseFromString(html, 'text/html');
+        var parser = new DOMParser();
+        var doc    = parser.parseFromString(html, 'text/html');
 
         // Ambil hanya konten #daftarPesananContainer dari halaman baru
         var newContainer = doc.getElementById('daftarPesananContainer');
@@ -419,15 +510,16 @@ document.getElementById('btnManualRefresh').addEventListener('click', function()
         // ── Kembalikan posisi scroll ke koordinat semula ──────────────────
         window.scrollTo({ top: savedScrollTop, behavior: 'instant' });
 
-        tampilkanAlert('🔄 Daftar pesanan telah diperbarui.', 'success');
+        // Tampilkan Pop-up Toast (menggantikan alert statis)
+        tampilkanToast('🔄 Daftar pesanan telah diperbarui.', 'success');
     })
     .catch(function() {
-        tampilkanAlert('❌ Gagal memuat ulang daftar pesanan.', 'danger');
+        tampilkanToast('❌ Gagal memuat ulang daftar pesanan.', 'danger', 5000);
     })
     .finally(function() {
         // Reset animasi ikon dan aktifkan kembali tombol
         setTimeout(function() {
-            iconSvg.style.transform = 'rotate(0deg)';
+            iconSvg.style.transform  = 'rotate(0deg)';
             iconSvg.style.transition = 'transform 0s';
         }, 100);
         btn.disabled  = false;

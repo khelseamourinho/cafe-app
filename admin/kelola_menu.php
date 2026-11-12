@@ -186,23 +186,9 @@ require '../includes/header.php';
 </div>
 <p class="text-muted mb-4">Tambah, ubah, atau hapus item menu kafe.</p>
 
-<?php if ($pesan === 'tambah'): ?>
-    <div class="alert alert-success alert-dismissible fade show">Menu berhasil ditambahkan. <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
-<?php elseif ($pesan === 'edit'): ?>
-    <div class="alert alert-info alert-dismissible fade show">Menu berhasil diperbarui. <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
-<?php elseif ($pesan === 'hapus'): ?>
-    <div class="alert alert-warning alert-dismissible fade show">Menu berhasil dihapus. <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
-<?php elseif ($pesan === 'biaya'): ?>
-    <div class="alert alert-success alert-dismissible fade show">Pengaturan pajak & biaya layanan berhasil disimpan. <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
-<?php elseif ($pesan === 'banner_tambah'): ?>
-    <div class="alert alert-success alert-dismissible fade show">Banner berhasil ditambahkan. <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
-<?php elseif ($pesan === 'banner_hapus'): ?>
-    <div class="alert alert-warning alert-dismissible fade show">Banner berhasil dihapus. <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
-<?php elseif ($pesan === 'banner_toggle'): ?>
-    <div class="alert alert-info alert-dismissible fade show">Status banner diperbarui. <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
-<?php elseif ($pesan === 'banner_urutan'): ?>
-    <div class="alert alert-info alert-dismissible fade show">Urutan banner diperbarui. <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
-<?php endif; ?>
+<!-- Notifikasi hasil aksi (tambah, edit, hapus, dll.) ditampilkan otomatis
+     oleh footer.php sebagai Pop-up Toast Melayang berdasarkan ?pesan= di URL.
+     Tidak ada lagi <div class="alert"> statis di sini. -->
 
 <!-- ════════════════ Tabel Menu ════════════════ -->
 <div class="card mb-4">
@@ -243,9 +229,11 @@ require '../includes/header.php';
                     </td>
                     <td class="text-center">
                         <a href="?edit=<?= $menu['id_menu'] ?>" class="btn btn-sm btn-outline-secondary">Edit</a>
-                        <a href="?hapus=<?= $menu['id_menu'] ?>"
-                           class="btn btn-sm btn-outline-danger"
-                           onclick="return confirm('Yakin ingin menghapus menu ini?')">Hapus</a>
+                        <button type="button"
+                                class="btn btn-sm btn-outline-danger btn-hapus-item-modal"
+                                data-url="?hapus=<?= $menu['id_menu'] ?>"
+                                data-nama="<?= htmlspecialchars($menu['nama_menu']) ?>"
+                                data-tipe="menu">Hapus</button>
                     </td>
                 </tr>
                 <?php endforeach; ?>
@@ -302,9 +290,11 @@ require '../includes/header.php';
                         </a>
                     </td>
                     <td class="text-center">
-                        <a href="?hapus_banner=<?= $banner['id_image'] ?>"
-                           class="btn btn-sm btn-outline-danger"
-                           onclick="return confirm('Hapus banner ini?')">Hapus</a>
+                        <button type="button"
+                                class="btn btn-sm btn-outline-danger btn-hapus-item-modal"
+                                data-url="?hapus_banner=<?= $banner['id_image'] ?>"
+                                data-nama="Banner Carousel #<?= $banner['id_image'] ?>"
+                                data-tipe="banner carousel">Hapus</button>
                     </td>
                 </tr>
                 <?php endforeach; ?>
@@ -339,9 +329,11 @@ require '../includes/header.php';
                                class="btn btn-xs btn-outline-secondary btn-sm py-0 px-2 small">
                                <?= $popup['status'] ? 'Nonaktifkan' : 'Aktifkan' ?>
                             </a>
-                            <a href="?hapus_banner=<?= $popup['id_image'] ?>"
-                               class="btn btn-xs btn-outline-danger btn-sm py-0 px-2 small"
-                               onclick="return confirm('Hapus pop-up ini?')">Hapus</a>
+                            <button type="button"
+                                    class="btn btn-xs btn-outline-danger btn-sm py-0 px-2 small btn-hapus-item-modal"
+                                    data-url="?hapus_banner=<?= $popup['id_image'] ?>"
+                                    data-nama="Pop-up Banner #<?= $popup['id_image'] ?>"
+                                    data-tipe="popup banner">Hapus</button>
                         </div>
                     </div>
                 </div>
