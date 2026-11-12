@@ -8,6 +8,28 @@ if (!isset($_SESSION['id_user']) || $_SESSION['role'] !== 'admin') {
 }
 require_once '../config/koneksi.php';
 
+// ─── HANDLER PEMBATALAN PESANAN OLEH ADMIN ────────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'batalkan_pesanan') {
+    header('Content-Type: application/json');
+    $id_order = (int) ($_POST['id_order'] ?? 0);
+    if ($id_order <= 0) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'ID pesanan tidak valid.']);
+        exit;
+    }
+    $res_cek    = mysqli_query($koneksi, "SELECT status_pesanan FROM orders WHERE id_order = $id_order");
+    $status_lama = mysqli_fetch_assoc($res_cek)['status_pesanan'] ?? '';
+
+    if (in_array($status_lama, ['Pending', 'Sedang Dibuat'])) {
+        mysqli_query($koneksi, "UPDATE orders SET status_pesanan = 'Dibatalkan' WHERE id_order = $id_order");
+        echo json_encode(['success' => true, 'message' => 'Pesanan berhasil dibatalkan.']);
+    } else {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Pesanan dalam status "' . $status_lama . '" tidak dapat dibatalkan.']);
+    }
+    exit;
+}
+
 // ─── UPDATE STATUS PESANAN ────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_order'], $_POST['status_pesanan'])) {
     $id_order    = (int) $_POST['id_order'];
@@ -30,12 +52,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_order'], $_POST['s
     $res_cek     = mysqli_query($koneksi, "SELECT status_pesanan FROM orders WHERE id_order = $id_order");
     $status_lama = mysqli_fetch_assoc($res_cek)['status_pesanan'] ?? '';
 
-    // Aturan: tidak bisa mundur ke status sebelumnya, tidak bisa ubah yang sudah Selesai
-    $urutan = array_flip($status_valid); // ['Pending'=>0, 'Sedang Dibuat'=>1, ...]
+    // Aturan: tidak bisa mundur ke status sebelumnya, tidak bisa ubah yang sudah Selesai/Dibatalkan
+    $urutan = array_flip(['Pending', 'Sedang Dibuat', 'Siap Pick-up', 'Selesai']); // urutan normal saja
     $error_status = '';
-    if ($status_lama === 'Selesai') {
-        $error_status = 'Pesanan yang sudah Selesai tidak dapat diubah statusnya.';
-    } elseif ($urutan[$status_baru] < $urutan[$status_lama]) {
+    if (in_array($status_lama, ['Selesai', 'Dibatalkan'])) {
+        $error_status = 'Pesanan yang sudah "' . $status_lama . '" tidak dapat diubah statusnya.';
+    } elseif (isset($urutan[$status_baru]) && isset($urutan[$status_lama]) && $urutan[$status_baru] < $urutan[$status_lama]) {
         $error_status = 'Status tidak dapat dimundurkan dari "' . $status_lama . '" ke "' . $status_baru . '".';
     }
 
@@ -44,7 +66,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_order'], $_POST['s
         'Pending'       => 'bg-warning text-dark',
         'Sedang Dibuat' => 'bg-info text-dark',
         'Siap Pick-up'  => 'bg-primary',
-        'Selesai'       => 'bg-success'
+        'Selesai'       => 'bg-success',
+        'Dibatalkan'    => 'bg-danger',
     ];
 
     // ─── Deteksi apakah request ini berasal dari AJAX ───────────────────────
@@ -112,12 +135,13 @@ if (!empty($daftar_order)) {
     }
 }
 
-$status_list = ['Pending', 'Sedang Dibuat', 'Siap Pick-up', 'Selesai'];
+$status_list = ['Pending', 'Sedang Dibuat', 'Siap Pick-up', 'Selesai', 'Dibatalkan'];
 $warna_badge = [
     'Pending'       => 'bg-warning text-dark',
     'Sedang Dibuat' => 'bg-info text-dark',
     'Siap Pick-up'  => 'bg-primary',
-    'Selesai'       => 'bg-success'
+    'Selesai'       => 'bg-success',
+    'Dibatalkan'    => 'bg-danger',
 ];
 
 $pesan        = $_GET['pesan']  ?? '';
@@ -220,8 +244,10 @@ require '../includes/header.php';
 <?php endif; ?>
 
 <?php foreach ($daftar_order as $order):
-    $urutan_status = array_flip($status_list);
-    $sudah_selesai = $order['status_pesanan'] === 'Selesai';
+    $urutan_status = array_flip(['Pending', 'Sedang Dibuat', 'Siap Pick-up', 'Selesai']);
+    $sudah_selesai   = $order['status_pesanan'] === 'Selesai';
+    $sudah_dibatalkan = $order['status_pesanan'] === 'Dibatalkan';
+    $bisa_dibatalkan = in_array($order['status_pesanan'], ['Pending', 'Sedang Dibuat']);
 ?>
 <!-- Kartu pesanan: diberi id unik dan data-status untuk manipulasi DOM via JS -->
 <div class="card mb-3" id="order-card-<?= $order['id_order'] ?>" data-status="<?= htmlspecialchars($order['status_pesanan']) ?>">
@@ -274,7 +300,9 @@ require '../includes/header.php';
         </table>
 
         <!-- Ubah Status -->
-        <?php if ($sudah_selesai): ?>
+        <?php if ($sudah_dibatalkan): ?>
+            <p class="text-danger small mb-0">❌ Pesanan ini telah dibatalkan.</p>
+        <?php elseif ($sudah_selesai): ?>
             <p class="text-muted small mb-0">✅ Pesanan ini sudah selesai dan tidak dapat diubah.</p>
         <?php else: ?>
             <!-- Form AJAX: onsubmit dicegat oleh JS, tidak akan reload halaman -->
@@ -284,7 +312,7 @@ require '../includes/header.php';
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                     <label class="form-label mb-0 me-1 text-nowrap fw-semibold">Ubah Status:</label>
                     <select name="status_pesanan" class="form-select form-select-sm" style="max-width:200px">
-                        <?php foreach ($status_list as $st): ?>
+                        <?php foreach (['Pending', 'Sedang Dibuat', 'Siap Pick-up', 'Selesai'] as $st): ?>
                             <option value="<?= $st ?>"
                                 <?= $order['status_pesanan'] === $st ? 'selected' : '' ?>
                                 <?= $urutan_status[$st] < $urutan_status[$order['status_pesanan']] ? 'disabled' : '' ?>>
@@ -295,6 +323,16 @@ require '../includes/header.php';
                     <button type="submit" class="btn btn-sm btn-primary btn-simpan-status">Simpan</button>
                 </div>
             </form>
+            <?php if ($bisa_dibatalkan): ?>
+            <div class="mt-2">
+                <button type="button" class="btn btn-sm btn-outline-danger btn-batal-order-admin"
+                        data-id="<?= $order['id_order'] ?>"
+                        data-customer="<?= htmlspecialchars($order['nama_customer']) ?>"
+                        data-status="<?= htmlspecialchars($order['status_pesanan']) ?>">
+                    Batalkan Pesanan
+                </button>
+            </div>
+            <?php endif; ?>
         <?php endif; ?>
     </div>
 </div>
@@ -313,7 +351,8 @@ const WARNA_BADGE = {
     'Pending'      : 'bg-warning text-dark',
     'Sedang Dibuat': 'bg-info text-dark',
     'Siap Pick-up' : 'bg-primary',
-    'Selesai'      : 'bg-success'
+    'Selesai'      : 'bg-success',
+    'Dibatalkan'   : 'bg-danger'
 };
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -526,6 +565,126 @@ document.getElementById('btnManualRefresh').addEventListener('click', function()
         sedangRefresh = false;
     });
 });
+
+/* ═══════════════════════════════════════════════════════════════
+   FITUR 3 — Pembatalan Pesanan oleh Admin
+   Handler untuk tombol .btn-batal-order-admin + Modal Konfirmasi
+   ═══════════════════════════════════════════════════════════════ */
+var _batalAdminId       = null;
+var _batalAdminCustomer = null;
+var _batalAdminStatus   = null;
+
+// Tangkap klik pada tombol batal (event delegation karena kartu bisa di-refresh)
+document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.btn-batal-order-admin');
+    if (!btn) return;
+
+    _batalAdminId       = btn.dataset.id;
+    _batalAdminCustomer = btn.dataset.customer;
+    _batalAdminStatus   = btn.dataset.status;
+
+    document.getElementById('batalAdmin-id-order').textContent      = '#' + _batalAdminId;
+    document.getElementById('batalAdmin-nama-customer').textContent = _batalAdminCustomer;
+    document.getElementById('batalAdmin-status').textContent        = _batalAdminStatus;
+
+    var modalEl = document.getElementById('modalKonfirmasiBatalAdmin');
+    bootstrap.Modal.getOrCreateInstance(modalEl).show();
+});
+
+document.getElementById('btnKonfirmasiBatalAdmin') &&
+document.getElementById('btnKonfirmasiBatalAdmin').addEventListener('click', function() {
+    if (!_batalAdminId) return;
+
+    var idOrder = _batalAdminId;
+    var btn = this;
+    btn.disabled    = true;
+    btn.textContent = 'Memproses...';
+
+    var formData = new FormData();
+    formData.append('action',   'batalkan_pesanan');
+    formData.append('id_order', idOrder);
+
+    fetch('kelola_pesanan.php', { method: 'POST', body: formData })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            bootstrap.Modal.getInstance(document.getElementById('modalKonfirmasiBatalAdmin')).hide();
+
+            if (data.success) {
+                // Update badge kartu → merah Dibatalkan
+                var badgeEl = document.getElementById('badge-' + idOrder);
+                if (badgeEl) {
+                    badgeEl.className   = 'badge fs-6 bg-danger';
+                    badgeEl.textContent = 'Dibatalkan';
+                }
+                // Update data-status kartu
+                var cardEl = document.getElementById('order-card-' + idOrder);
+                if (cardEl) cardEl.dataset.status = 'Dibatalkan';
+
+                // Ganti area aksi tombol dengan teks pembatalan
+                var formEl = cardEl ? cardEl.querySelector('.form-ubah-status') : null;
+                if (formEl) {
+                    formEl.closest('.card-body').querySelector('.form-ubah-status').outerHTML =
+                        '<p class="text-danger small mb-0">❌ Pesanan ini telah dibatalkan.</p>';
+                }
+                // Sembunyikan tombol batalkan juga
+                var btnBatal = cardEl ? cardEl.querySelector('.btn-batal-order-admin') : null;
+                if (btnBatal) {
+                    var wrapper = btnBatal.closest('div');
+                    if (wrapper) wrapper.remove();
+                }
+
+                tampilkanToast('✅ ' + data.message, 'success');
+            } else {
+                tampilkanToast('❌ ' + (data.message || 'Gagal membatalkan pesanan.'), 'danger', 5000);
+            }
+        })
+        .catch(function() {
+            tampilkanToast('❌ Gagal menghubungi server.', 'danger', 5000);
+        })
+        .finally(function() {
+            btn.disabled    = false;
+            btn.textContent = 'Ya, Batalkan Pesanan';
+            _batalAdminId = _batalAdminCustomer = _batalAdminStatus = null;
+        });
+});
 </script>
+
+<!-- ══════════════ MODAL KONFIRMASI BATAL ADMIN ══════════════ -->
+<div class="modal fade" id="modalKonfirmasiBatalAdmin" tabindex="-1" aria-labelledby="labelBatalAdmin" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:440px">
+        <div class="modal-content border-0 shadow-lg rounded-3">
+            <div class="modal-header border-bottom-0 pb-0">
+                <h5 class="modal-title fw-bold" id="labelBatalAdmin">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="text-danger me-2 mb-1" viewBox="0 0 16 16">
+                        <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/>
+                    </svg>
+                    Konfirmasi Pembatalan Pesanan
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            </div>
+            <div class="modal-body pt-2 pb-3">
+                <p class="text-muted mb-3 small">Apakah Anda yakin ingin membatalkan pesanan ini secara permanen?</p>
+                <div class="rounded-3 border p-3 bg-light">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted small">Nomor Pesanan</span>
+                        <strong id="batalAdmin-id-order">—</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted small">Customer</span>
+                        <strong id="batalAdmin-nama-customer">—</strong>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted small">Status saat ini</span>
+                        <span id="batalAdmin-status" class="badge bg-secondary">—</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-top-0 pt-0 gap-2">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-danger" id="btnKonfirmasiBatalAdmin">Ya, Batalkan Pesanan</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <?php require '../includes/footer.php'; ?>

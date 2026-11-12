@@ -49,7 +49,7 @@ while ($baris = mysqli_fetch_assoc($hasil)) {
 $pesanan_berjalan = [];
 $pesanan_selesai  = [];
 foreach ($daftar_pesanan as $id_order => $pesanan) {
-    if ($pesanan['status_pesanan'] === 'Selesai') {
+    if (in_array($pesanan['status_pesanan'], ['Selesai', 'Dibatalkan'])) {
         $pesanan_selesai[$id_order] = $pesanan;
     } else {
         $pesanan_berjalan[$id_order] = $pesanan;
@@ -60,7 +60,8 @@ $warna_badge = [
     'Pending'       => 'bg-warning text-dark',
     'Sedang Dibuat' => 'bg-info text-dark',
     'Siap Pick-up'  => 'bg-primary',
-    'Selesai'       => 'bg-success'
+    'Selesai'       => 'bg-success',
+    'Dibatalkan'    => 'bg-danger',
 ];
 
 // Label tampilan (Pending -> Menunggu Pembayaran untuk customer)
@@ -68,7 +69,8 @@ $label_status = [
     'Pending'       => 'Menunggu Pembayaran',
     'Sedang Dibuat' => 'Sedang Dibuat',
     'Siap Pick-up'  => 'Siap Pick-up',
-    'Selesai'       => 'Selesai'
+    'Selesai'       => 'Selesai',
+    'Dibatalkan'    => 'Dibatalkan',
 ];
 
 // Hitung jumlah pesanan aktif untuk inisialisasi JS polling
@@ -382,23 +384,31 @@ function renderDetail(d, container) {
     };
     var statusIndex = statusList.indexOf(d.status_pesanan);
 
-    // ─── 1. PROGRESS TRACKER ───
-    var tracker = '<div class="progress-tracker">';
-    for (var i = 0; i < statusList.length; i++) {
-        var cls = '';
-        if (i < statusIndex)      cls = 'done';
-        else if (i === statusIndex) cls = 'active';
+    // ─── 1. PROGRESS TRACKER atau BANNER DIBATALKAN ───
+    var tracker = '';
+    if (d.status_pesanan === 'Dibatalkan') {
+        // Jangan render progress tracker; tampilkan banner merah
+        tracker = '<div class="alert alert-danger text-center mb-3 py-2">' +
+                  '<span class="fw-semibold">❌ Pesanan ini telah dibatalkan</span>' +
+                  '</div>';
+    } else {
+        tracker = '<div class="progress-tracker">';
+        for (var i = 0; i < statusList.length; i++) {
+            var cls = '';
+            if (i < statusIndex)      cls = 'done';
+            else if (i === statusIndex) cls = 'active';
 
-        tracker += '<div class="progress-step ' + cls + '">';
-        tracker += '  <div class="step-circle">' + (i < statusIndex ? '✓' : (i + 1)) + '</div>';
-        tracker += '  <div class="step-label">' + statusLabel[statusList[i]] + '</div>';
-        tracker += '</div>';
+            tracker += '<div class="progress-step ' + cls + '">';
+            tracker += '  <div class="step-circle">' + (i < statusIndex ? '✓' : (i + 1)) + '</div>';
+            tracker += '  <div class="step-label">' + statusLabel[statusList[i]] + '</div>';
+            tracker += '</div>';
 
-        if (i < statusList.length - 1) {
-            tracker += '<div class="progress-line ' + (i < statusIndex ? 'done' : '') + '"></div>';
+            if (i < statusList.length - 1) {
+                tracker += '<div class="progress-line ' + (i < statusIndex ? 'done' : '') + '"></div>';
+            }
         }
+        tracker += '</div>';
     }
-    tracker += '</div>';
 
     // ─── 2. QRIS BUTTON & KETERANGAN PENDING ───
     var qrisSection = '';
@@ -460,8 +470,16 @@ function renderDetail(d, container) {
     paySection += '<div class="d-flex justify-content-between mt-1"><span class="text-muted small">Metode</span><span class="badge bg-secondary">' + d.metode_pembayaran + '</span></div>';
     paySection += '</div>';
 
+    // ─── 6. TOMBOL BATALKAN (hanya saat Pending) ───
+    var batalSection = '';
+    if (d.status_pesanan === 'Pending') {
+        batalSection = '<button type="button" class="btn btn-outline-danger w-100 mt-3" ' +
+                       'onclick="bukaModalBatalPelanggan(' + d.id_order + ')">' +
+                       'Batalkan Pesanan</button>';
+    }
+
     // ─── RENDER KE MODAL ───
-    container.innerHTML = tracker + qrisSection + infoSection + menuSection + paySection;
+    container.innerHTML = tracker + qrisSection + infoSection + menuSection + paySection + batalSection;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -476,16 +494,17 @@ function tampilkanQRIS(total) {
 /* ═══════════════════════════════════════════════════════════════
    PINDAHKAN KARTU (Opsi A) — dari tab Berjalan ke tab Selesai
    Disertai animasi fade-out → fade-in
+   badgeClass & badgeText opsional; default = Selesai
    ═══════════════════════════════════════════════════════════════ */
-function pindahkanKartuKeSelesai(idOrder) {
+function pindahkanKartuKeSelesai(idOrder, badgeClass, badgeText) {
     var colEl = document.getElementById('col-order-' + idOrder);
     if (!colEl) return; // Kartu sudah tidak ada di DOM
 
-    // Update badge di dalam kartu menjadi "✓ Selesai"
+    // Update badge di dalam kartu
     var badgeEl = document.getElementById('status-badge-' + idOrder);
     if (badgeEl) {
-        badgeEl.className   = 'badge bg-success';
-        badgeEl.textContent = '✓ Selesai';
+        badgeEl.className   = 'badge ' + (badgeClass || 'bg-success');
+        badgeEl.textContent = badgeText  || '✓ Selesai';
     }
 
     // Tambahkan opacity dan hilangkan event onclick (tidak perlu re-open sekarang)
@@ -568,8 +587,7 @@ function mulaiPolling() {
                     var id = parseInt(idOrder, 10);
 
                     if (!(id in statusBaru)) {
-                        // Pesanan tidak ada lagi di response "aktif" → berarti sudah Selesai
-                        // atau baru saja hilang; perlakukan sebagai Selesai
+                        // Pesanan tidak ada lagi di response "aktif" → berarti sudah Selesai/Dibatalkan
                         pindahkanKartuKeSelesai(id);
                         // Sinkronisasi modal jika sedang terbuka untuk pesanan ini
                         if (currentModalOrder === id) {
@@ -586,6 +604,9 @@ function mulaiPolling() {
                         if (statusServerBaru === 'Selesai') {
                             // Pindahkan kartu ke tab Selesai
                             pindahkanKartuKeSelesai(id);
+                        } else if (statusServerBaru === 'Dibatalkan') {
+                            // Pindahkan kartu ke tab Selesai dengan badge merah
+                            pindahkanKartuKeSelesai(id, 'bg-danger', 'Dibatalkan');
                         } else {
                             // Update badge warna dan teks di kartu
                             var badgeEl = document.getElementById('status-badge-' + id);
@@ -682,6 +703,100 @@ document.addEventListener('DOMContentLoaded', function() {
     bukaDetail(<?= $qris_order_id ?>, true);
 });
 <?php endif; ?>
+
+/* ═══════════════════════════════════════════════════════════════
+   PEMBATALAN PESANAN PELANGGAN
+   ═══════════════════════════════════════════════════════════════ */
+var _batalIdOrder = null; // ID order yang akan dibatalkan
+
+function bukaModalBatalPelanggan(idOrder) {
+    _batalIdOrder = idOrder;
+    var modalEl = document.getElementById('modalKonfirmasiBatalPelanggan');
+    var bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    bsModal.show();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    var btnYaBatal = document.getElementById('btnYaBatalPelanggan');
+    if (!btnYaBatal) return;
+
+    btnYaBatal.addEventListener('click', function() {
+        if (!_batalIdOrder) return;
+
+        var idOrder = _batalIdOrder;
+        btnYaBatal.disabled    = true;
+        btnYaBatal.textContent = 'Memproses...';
+
+        var formData = new FormData();
+        formData.append('id_order', idOrder);
+
+        fetch('batal_pesanan.php', { method: 'POST', body: formData })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                // Tutup kedua modal
+                bootstrap.Modal.getInstance(document.getElementById('modalKonfirmasiBatalPelanggan')).hide();
+                var modalDetailEl = document.getElementById('modalDetail');
+                if (modalDetailEl) {
+                    var instDetail = bootstrap.Modal.getInstance(modalDetailEl);
+                    if (instDetail) instDetail.hide();
+                }
+
+                if (data.success) {
+                    // Pindahkan kartu ke tab Selesai dengan badge merah Dibatalkan
+                    pindahkanKartuKeSelesai(idOrder, 'bg-danger', 'Dibatalkan');
+                    // Tampilkan notifikasi sukses
+                    var toastEl = document.getElementById('toastBatalSukses');
+                    if (toastEl) {
+                        new bootstrap.Toast(toastEl, { delay: 3500 }).show();
+                    }
+                } else {
+                    alert('Gagal: ' + (data.message || 'Terjadi kesalahan.'));
+                }
+            })
+            .catch(function() {
+                alert('Gagal menghubungi server. Silakan coba lagi.');
+            })
+            .finally(function() {
+                btnYaBatal.disabled    = false;
+                btnYaBatal.textContent = 'Ya, Batalkan';
+                _batalIdOrder = null;
+            });
+    });
+});
 </script>
+
+<!-- ══════════════ MODAL KONFIRMASI BATAL PELANGGAN ══════════════ -->
+<div class="modal fade" id="modalKonfirmasiBatalPelanggan" tabindex="-1" aria-labelledby="labelBatalPelanggan" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:420px">
+        <div class="modal-content border-0 shadow-lg rounded-3">
+            <div class="modal-header border-bottom-0 pb-0">
+                <h5 class="modal-title fw-bold" id="labelBatalPelanggan">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="text-danger me-2 mb-1" viewBox="0 0 16 16">
+                        <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/>
+                    </svg>
+                    Batalkan Pesanan
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <p class="text-muted mb-0">Apakah Anda yakin ingin membatalkan pesanan ini? <strong>Tindakan ini tidak dapat dibatalkan.</strong></p>
+            </div>
+            <div class="modal-footer border-top-0 gap-2">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Kembali</button>
+                <button type="button" class="btn btn-danger" id="btnYaBatalPelanggan">Ya, Batalkan</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast notifikasi pembatalan berhasil -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:1100">
+    <div id="toastBatalSukses" class="toast align-items-center text-bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body fw-semibold">❌ Pesanan berhasil dibatalkan.</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Tutup"></button>
+        </div>
+    </div>
+</div>
 
 <?php include 'includes/footer.php'; ?>

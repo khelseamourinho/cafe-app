@@ -40,7 +40,7 @@ $stmt = mysqli_prepare($koneksi,
     "SELECT id_order, status_pesanan, tipe_order, total_harga, created_at
      FROM orders
      WHERE id_user = ?
-       AND status_pesanan != 'Selesai'
+       AND status_pesanan NOT IN ('Selesai', 'Dibatalkan')
      ORDER BY created_at DESC"
 );
 
