@@ -7,6 +7,7 @@ if (!isset($_SESSION['id_user']) || $_SESSION['role'] !== 'admin') {
     exit;
 }
 require_once '../config/koneksi.php';
+require_once '../includes/upload_helper.php';
 
 // ─── Pemetaan kategori: nilai DB → label tampil ───────────────────────────────
 $kategori_list = [
@@ -18,29 +19,14 @@ $kategori_list = [
     'snack'              => 'Snacks',
 ];
 
-// ─── Helper: proses upload foto ──────────────────────────────────────────────
-function proses_upload_foto(string $field_name): string
-{
-    if (empty($_FILES[$field_name]['name'])) {
-        return '';
-    }
-    $allowed_types = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-    $file_type     = mime_content_type($_FILES[$field_name]['tmp_name']);
-    if (!in_array($file_type, $allowed_types)) {
-        die('Tipe file tidak diizinkan. Gunakan JPG, PNG, WEBP, atau GIF.');
-    }
-    $ekstensi  = pathinfo($_FILES[$field_name]['name'], PATHINFO_EXTENSION);
-    $nama_file = 'menu_' . time() . '_' . rand(100, 999) . '.' . strtolower($ekstensi);
-    $tujuan    = __DIR__ . '/../assets/' . $nama_file;
-    if (!move_uploaded_file($_FILES[$field_name]['tmp_name'], $tujuan)) {
-        die('Gagal menyimpan foto. Periksa permission folder assets/.');
-    }
-    return 'assets/' . $nama_file;
-}
-
 // ─── HAPUS MENU ──────────────────────────────────────────────────────────────
 if (isset($_GET['hapus'])) {
     $id_hapus = (int) $_GET['hapus'];
+    // Ambil path gambar lama sebelum dihapus dari database
+    $res_hapus = mysqli_query($koneksi, "SELECT gambar FROM menus WHERE id_menu = $id_hapus");
+    if ($row_hapus = mysqli_fetch_assoc($res_hapus)) {
+        hapus_berkas_fisik($row_hapus['gambar']);
+    }
     mysqli_query($koneksi, "DELETE FROM menus WHERE id_menu = $id_hapus")
         or die(mysqli_error($koneksi));
     header('Location: kelola_menu.php?pesan=hapus');
@@ -54,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['aksi'] ?? '') === 'tambah'
     $harga     = (int) $_POST['harga'];
     $deskripsi = mysqli_real_escape_string($koneksi, $_POST['deskripsi']);
 
-    $gambar = proses_upload_foto('foto_menu');
+    $gambar = upload_gambar('foto_menu', 'menu', $kategori, (int) $_SESSION['id_user']);
     if ($gambar === '') {
         $gambar = mysqli_real_escape_string($koneksi, $_POST['gambar_url'] ?? '');
     }
@@ -74,8 +60,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['aksi'] ?? '') === 'edit') 
     $harga     = (int) $_POST['harga'];
     $deskripsi = mysqli_real_escape_string($koneksi, $_POST['deskripsi']);
 
-    $gambar = proses_upload_foto('foto_menu');
-    if ($gambar === '') {
+    $gambar_baru = upload_gambar('foto_menu', 'menu', $kategori, (int) $_SESSION['id_user']);
+    if ($gambar_baru !== '') {
+        // Hapus berkas fisik lama dari server jika ada gambar baru yang diunggah
+        $gambar_lama = mysqli_real_escape_string($koneksi, $_POST['gambar_lama'] ?? '');
+        hapus_berkas_fisik($gambar_lama);
+        $gambar = $gambar_baru;
+    } else {
         $gambar = mysqli_real_escape_string($koneksi, $_POST['gambar_lama'] ?? '');
     }
     mysqli_query($koneksi,
@@ -96,7 +87,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['aksi'] ?? '') === 'tambah_
         mysqli_query($koneksi, "UPDATE banner SET status = 0 WHERE keterangan = 'popup_banner'");
     }
 
-    $gambar = proses_upload_foto('foto_banner');
+    // subfitur upload: 'carousel' atau 'popup' (dipetakan dari nilai keterangan)
+    $subfitur_banner = ($keterangan === 'popup_banner') ? 'popup' : 'carousel';
+    $gambar = upload_gambar('foto_banner', 'banner', $subfitur_banner, (int) $_SESSION['id_user']);
     if ($gambar === '') {
         $gambar = mysqli_real_escape_string($koneksi, $_POST['gambar_url'] ?? '');
     }
@@ -123,6 +116,11 @@ if (isset($_GET['toggle_banner'])) {
 // ─── HAPUS BANNER ────────────────────────────────────────────────────────────
 if (isset($_GET['hapus_banner'])) {
     $id_b = (int) $_GET['hapus_banner'];
+    // Ambil path gambar lama sebelum dihapus dari database
+    $res_banner = mysqli_query($koneksi, "SELECT gambar FROM banner WHERE id_image = $id_b");
+    if ($row_banner = mysqli_fetch_assoc($res_banner)) {
+        hapus_berkas_fisik($row_banner['gambar']);
+    }
     mysqli_query($koneksi, "DELETE FROM banner WHERE id_image = $id_b")
         or die(mysqli_error($koneksi));
     header('Location: kelola_menu.php?pesan=banner_hapus');
@@ -188,23 +186,9 @@ require '../includes/header.php';
 </div>
 <p class="text-muted mb-4">Tambah, ubah, atau hapus item menu kafe.</p>
 
-<?php if ($pesan === 'tambah'): ?>
-    <div class="alert alert-success alert-dismissible fade show">Menu berhasil ditambahkan. <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
-<?php elseif ($pesan === 'edit'): ?>
-    <div class="alert alert-info alert-dismissible fade show">Menu berhasil diperbarui. <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
-<?php elseif ($pesan === 'hapus'): ?>
-    <div class="alert alert-warning alert-dismissible fade show">Menu berhasil dihapus. <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
-<?php elseif ($pesan === 'biaya'): ?>
-    <div class="alert alert-success alert-dismissible fade show">Pengaturan pajak & biaya layanan berhasil disimpan. <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
-<?php elseif ($pesan === 'banner_tambah'): ?>
-    <div class="alert alert-success alert-dismissible fade show">Banner berhasil ditambahkan. <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
-<?php elseif ($pesan === 'banner_hapus'): ?>
-    <div class="alert alert-warning alert-dismissible fade show">Banner berhasil dihapus. <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
-<?php elseif ($pesan === 'banner_toggle'): ?>
-    <div class="alert alert-info alert-dismissible fade show">Status banner diperbarui. <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
-<?php elseif ($pesan === 'banner_urutan'): ?>
-    <div class="alert alert-info alert-dismissible fade show">Urutan banner diperbarui. <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
-<?php endif; ?>
+<!-- Notifikasi hasil aksi (tambah, edit, hapus, dll.) ditampilkan otomatis
+     oleh footer.php sebagai Pop-up Toast Melayang berdasarkan ?pesan= di URL.
+     Tidak ada lagi <div class="alert"> statis di sini. -->
 
 <!-- ════════════════ Tabel Menu ════════════════ -->
 <div class="card mb-4">
@@ -245,9 +229,11 @@ require '../includes/header.php';
                     </td>
                     <td class="text-center">
                         <a href="?edit=<?= $menu['id_menu'] ?>" class="btn btn-sm btn-outline-secondary">Edit</a>
-                        <a href="?hapus=<?= $menu['id_menu'] ?>"
-                           class="btn btn-sm btn-outline-danger"
-                           onclick="return confirm('Yakin ingin menghapus menu ini?')">Hapus</a>
+                        <button type="button"
+                                class="btn btn-sm btn-outline-danger btn-hapus-item-modal"
+                                data-url="?hapus=<?= $menu['id_menu'] ?>"
+                                data-nama="<?= htmlspecialchars($menu['nama_menu']) ?>"
+                                data-tipe="menu">Hapus</button>
                     </td>
                 </tr>
                 <?php endforeach; ?>
@@ -304,9 +290,11 @@ require '../includes/header.php';
                         </a>
                     </td>
                     <td class="text-center">
-                        <a href="?hapus_banner=<?= $banner['id_image'] ?>"
-                           class="btn btn-sm btn-outline-danger"
-                           onclick="return confirm('Hapus banner ini?')">Hapus</a>
+                        <button type="button"
+                                class="btn btn-sm btn-outline-danger btn-hapus-item-modal"
+                                data-url="?hapus_banner=<?= $banner['id_image'] ?>"
+                                data-nama="Banner Carousel #<?= $banner['id_image'] ?>"
+                                data-tipe="banner carousel">Hapus</button>
                     </td>
                 </tr>
                 <?php endforeach; ?>
@@ -341,9 +329,11 @@ require '../includes/header.php';
                                class="btn btn-xs btn-outline-secondary btn-sm py-0 px-2 small">
                                <?= $popup['status'] ? 'Nonaktifkan' : 'Aktifkan' ?>
                             </a>
-                            <a href="?hapus_banner=<?= $popup['id_image'] ?>"
-                               class="btn btn-xs btn-outline-danger btn-sm py-0 px-2 small"
-                               onclick="return confirm('Hapus pop-up ini?')">Hapus</a>
+                            <button type="button"
+                                    class="btn btn-xs btn-outline-danger btn-sm py-0 px-2 small btn-hapus-item-modal"
+                                    data-url="?hapus_banner=<?= $popup['id_image'] ?>"
+                                    data-nama="Pop-up Banner #<?= $popup['id_image'] ?>"
+                                    data-tipe="popup banner">Hapus</button>
                         </div>
                     </div>
                 </div>
@@ -434,7 +424,7 @@ require '../includes/header.php';
                     <div class="mb-3">
                         <label class="form-label text-muted small">atau URL Gambar (jika tidak upload)</label>
                         <input type="text" name="gambar_url" class="form-control form-control-sm"
-                               placeholder="assets/nama-file.jpg atau URL eksternal">
+                               placeholder="assets/uploads/menu/nama-file.jpg atau URL eksternal">
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -469,7 +459,7 @@ require '../includes/header.php';
                     <div class="mb-3">
                         <label class="form-label text-muted small">atau URL Gambar (jika tidak upload)</label>
                         <input type="text" name="gambar_url" class="form-control form-control-sm"
-                               placeholder="assets/nama-file.jpg atau URL eksternal">
+                               placeholder="assets/uploads/banner/carousel/nama-file.jpg atau URL eksternal">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Urutan Tampil</label>
@@ -510,7 +500,7 @@ require '../includes/header.php';
                     <div class="mb-3">
                         <label class="form-label text-muted small">atau URL Gambar</label>
                         <input type="text" name="gambar_url" class="form-control form-control-sm"
-                               placeholder="assets/nama-file.jpg atau URL eksternal">
+                               placeholder="assets/uploads/banner/popup/nama-file.jpg atau URL eksternal">
                     </div>
                     <input type="hidden" name="urutan" value="0">
                 </div>

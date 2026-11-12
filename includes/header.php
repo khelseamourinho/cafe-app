@@ -25,7 +25,7 @@ if (!isset($base_path)) {
     <div class="container d-flex justify-content-between align-items-center">
 
         <a class="navbar-brand d-flex align-items-center" href="<?= $base_path ?>index.php">
-            <img src="<?= $base_path ?>assets/logo.jpeg" alt="Logo Cafe Kita" height="36" class="me-2">
+            <img src="<?= $base_path ?>assets/static/logo.jpeg" alt="Logo Cafe Kita" height="36" class="me-2">
             Cafe Kita
         </a>
 

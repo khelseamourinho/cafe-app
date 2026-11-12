@@ -53,11 +53,4 @@ CREATE TABLE banner (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE banner (
-    id_image INT AUTO_INCREMENT PRIMARY KEY,
-    gambar VARCHAR(255) NOT NULL,  
-    keterangan ENUM('carousel_banner', 'popup_banner') NOT NULL,
-    urutan INT(2) DEFAULT 0 NOT NULL,
-    status TINYINT(1) DEFAULT 1,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+
