@@ -448,12 +448,26 @@ require '../includes/header.php';
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    <!-- Panduan dimensi standar -->
+                    <div class="alert alert-info d-flex gap-2 align-items-start py-2 px-3 mb-3 small">
+                        <span style="font-size:1.1rem;">📐</span>
+                        <div>
+                            <strong>Standar Ukuran Carousel Banner</strong><br>
+                            Gunakan gambar dengan <strong>rasio 16:9</strong> (landscape) agar tampilan konsisten di semua perangkat.<br>
+                            <span class="text-muted">Resolusi disarankan: <strong>1280 × 720 px</strong> atau lebih tinggi (maks. 2 MB).</span>
+                        </div>
+                    </div>
                     <div class="mb-3">
                         <label class="form-label">Foto Banner</label>
                         <input type="file" name="foto_banner" id="fotoBanner" class="form-control"
                                accept="image/jpeg,image/png,image/webp,image/gif">
-                        <div class="mt-2 text-center d-none" id="previewBannerWrap">
-                            <img id="previewBanner" src="" alt="Preview" class="img-thumbnail" style="max-height:140px">
+                        <!-- Preview proporsional 16:9 — identik dengan tampilan pelanggan -->
+                        <div class="mt-2 d-none" id="previewBannerWrap">
+                            <p class="text-muted small mb-1">Preview (16:9 — sesuai tampilan pelanggan):</p>
+                            <div style="width:100%; aspect-ratio:16/9; overflow:hidden; border-radius:6px; border:1px solid #dee2e6; background:#f8f9fa;">
+                                <img id="previewBanner" src="" alt="Preview"
+                                     style="width:100%; height:100%; object-fit:cover; display:block;">
+                            </div>
                         </div>
                     </div>
                     <div class="mb-3">

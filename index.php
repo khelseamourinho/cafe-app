@@ -96,6 +96,20 @@ html { scroll-behavior: smooth; }
 .img-placeholder { aspect-ratio: 4/3; min-height: 140px; background: #f8f9fa; display:flex; align-items:center; justify-content:center; }
 /* Scroll offset agar judul seksi tidak tertutup sticky header + kategori */
 section[id^="kat-"] { scroll-margin-top: 115px; }
+/* ── Carousel Banner: konsisten di semua ukuran layar ─────────────────────── */
+/* Wrapper: batasi lebar maksimal di desktop agar banner tidak terlalu raksasa */
+.promo-carousel-wrap {
+    max-width: 900px;
+    margin: 0 auto 1.5rem;
+}
+/* Gambar slide: rasio aspek tetap 16:9, lebar penuh, crop tengah */
+#promoCarousel .carousel-item img {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    display: block;
+    /* hapus height statis — tinggi kini dihitung otomatis dari aspect-ratio */
+}
 </style>
 
 <?php if ($tampil_popup && $popup): ?>
@@ -132,7 +146,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
 <!-- ═══ CAROUSEL BANNER PROMO ════════════════════════════════════════════════ -->
 <?php if (!empty($banners)): ?>
-<div id="promoCarousel" class="carousel slide mb-4 rounded overflow-hidden shadow-sm"
+<div class="promo-carousel-wrap">
+<div id="promoCarousel" class="carousel slide rounded overflow-hidden shadow-sm"
      data-bs-ride="carousel" data-bs-interval="4000">
 
     <?php if (count($banners) > 1): ?>
@@ -150,7 +165,6 @@ document.addEventListener('DOMContentLoaded', function () {
         <div class="carousel-item <?= $i === 0 ? 'active' : '' ?>">
             <img src="<?= htmlspecialchars($b['gambar']) ?>"
                  class="d-block w-100"
-                 style="height:220px; object-fit:cover;"
                  alt="Banner Promo <?= $i + 1 ?>"
                  onerror="this.style.display='none'">
         </div>
@@ -168,6 +182,7 @@ document.addEventListener('DOMContentLoaded', function () {
     </button>
     <?php endif; ?>
 </div>
+</div><!-- /.promo-carousel-wrap -->
 <?php endif; ?>
 
 <!-- ═══ STICKY CATEGORY NAV-PILLS ════════════════════════════════════════════ -->
