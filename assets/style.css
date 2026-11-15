@@ -140,7 +140,7 @@ html {
 
 [id^="kat-"] {
   scroll-margin-top: 135px !important; /* Jarak aman di bawah navbar & tab kategori */
-  padding-top: 16px;
+  padding-top: 10px;
 }
 
 /* === TAMPILAN ADMIN & FILTER STATUS === */
@@ -184,4 +184,93 @@ aside .nav-link.active {
   background-color: var(--latte-bg) !important;
   color: var(--espresso-primary) !important;
   font-weight: 700 !important;
+}
+
+/* === HALAMAN LOGIN & REGISTER === */
+.auth-card {
+  border-radius: 20px !important;
+  box-shadow: 0 10px 30px rgba(74, 44, 42, 0.08) !important;
+}
+
+.auth-badge {
+  background-color: var(--latte-bg);
+  color: var(--espresso-primary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 5px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border-soft);
+}
+
+.auth-input {
+  border-radius: 10px !important;
+  border: 1.5px solid var(--border-soft) !important;
+  padding: 10px 14px !important;
+  font-size: 0.92rem;
+  background-color: #fdfcfb !important;
+  transition: all 0.2s ease;
+}
+
+.auth-input:focus {
+  border-color: var(--caramel-accent) !important;
+  background-color: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(200, 125, 85, 0.15) !important;
+}
+
+.auth-link {
+  color: var(--caramel-accent) !important;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.auth-link:hover {
+  color: var(--espresso-primary) !important;
+  text-decoration: underline;
+}
+
+/* Membatasi deskripsi maksimal 2 baris agar tinggi kartu sejajar rata */
+.card-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2; /* Tambahkan baris ini agar peringatan di VS Code hilang */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.6em;
+  line-height: 1.35;
+}
+
+/* === OVERRIDE KHUSUS KARTU MENU INDEX.PHP === */
+[id^="menu-grid-"] .card {
+  overflow: hidden !important;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease !important;
+}
+
+[id^="menu-grid-"] .card:hover {
+  transform: translateY(-5px) !important;
+  border-color: var(--caramel-accent) !important;
+  box-shadow: 0 12px 24px rgba(74, 44, 42, 0.14) !important;
+}
+
+[id^="menu-grid-"] .menu-card-img {
+  transition: transform 0.35s ease !important;
+}
+
+[id^="menu-grid-"] .card:hover .menu-card-img {
+  transform: scale(1.04) !important;
+}
+
+/* Warna harga menjadi Caramel dan lebih menonjol */
+[id^="menu-grid-"] .card-body p.fw-bold {
+  color: var(--caramel-accent) !important;
+  font-size: 0.98rem !important;
+  margin-top: 4px;
+}
+
+/* Merapikan garis pemisah tombol Pesan di bagian bawah kartu */
+[id^="menu-grid-"] .card-footer {
+  border-top: none !important;
+  padding-top: 0 !important;
 }
