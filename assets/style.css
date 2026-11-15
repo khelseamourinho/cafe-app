@@ -1,0 +1,276 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap");
+
+:root {
+  --espresso-primary: #4a2c2a; /* Warna utama: tombol, header, ikon aktif */
+  --espresso-hover: #361f1e; /* Warna saat tombol disentuh kursor */
+  --caramel-accent: #c87d55; /* Warna aksen: badge, harga, sorotan */
+  --latte-bg: #f7f5f2; /* Latar belakang halaman (cream hangat) */
+  --card-white: #ffffff; /* Latar belakang kartu menu & form */
+  --text-dark: #1f1a17; /* Warna teks utama */
+  --text-muted: #6e6259; /* Warna deskripsi / teks sekunder */
+  --border-soft: #e6dfd8; /* Garis tepi halus */
+}
+
+body {
+  font-family: "Plus Jakarta Sans", sans-serif !important;
+  background-color: var(--latte-bg) !important;
+  color: var(--text-dark) !important;
+}
+
+/* Mengubah warna tombol utama (menimpa primary/danger/dark bawaan) */
+.btn-primary,
+.btn-danger,
+.btn-dark {
+  background-color: var(--espresso-primary) !important;
+  border-color: var(--espresso-primary) !important;
+  color: #ffffff !important;
+  border-radius: 10px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover,
+.btn-danger:hover,
+.btn-dark:hover {
+  background-color: var(--espresso-hover) !important;
+  border-color: var(--espresso-hover) !important;
+  transform: translateY(-1px);
+}
+
+/* Tombol garis tepi (outline) */
+.btn-outline-primary,
+.btn-outline-danger,
+.btn-outline-dark {
+  color: var(--espresso-primary) !important;
+  border-color: var(--espresso-primary) !important;
+  border-radius: 10px;
+}
+
+.btn-outline-primary:hover,
+.btn-outline-danger:hover,
+.btn-outline-dark:hover {
+  background-color: var(--espresso-primary) !important;
+  color: #ffffff !important;
+}
+
+/* Navbar / Header & Elemen Background */
+.navbar,
+.bg-primary,
+.bg-danger,
+.bg-dark {
+  background-color: var(--espresso-primary) !important;
+}
+
+/* Aksen Teks & Badge */
+.text-primary,
+.text-danger {
+  color: var(--caramel-accent) !important;
+}
+
+.badge.bg-primary,
+.badge.bg-danger,
+.badge.bg-warning {
+  background-color: var(--caramel-accent) !important;
+  color: #ffffff !important;
+}
+
+/* Kartu Menu & Container ala Kopi Kenangan */
+.card {
+  background-color: var(--card-white) !important;
+  border: 1px solid var(--border-soft) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 14px rgba(74, 44, 42, 0.06) !important;
+}
+
+/* 1. Memperjelas Logo, Teks "Cafe Kita", dan Ikon Menu di Navbar */
+.navbar .navbar-brand,
+.navbar .navbar-brand span,
+.navbar a {
+  color: #faf8f5 !important; /* Cream terang agar kontras & jelas terbaca */
+  font-weight: 700 !important;
+  letter-spacing: 0.3px;
+}
+
+.navbar .navbar-brand img {
+  border-radius: 8px;
+  border: 1.5px solid var(--caramel-accent);
+  background-color: #ffffff; /* Menjaga latar belakang logo tetap cerah */
+  padding: 2px;
+}
+
+/* Mengubah warna ikon garis tiga (hamburger menu) di kanan atas */
+.navbar-toggler {
+  border-color: rgba(250, 248, 245, 0.4) !important;
+}
+.navbar-toggler-icon {
+  filter: invert(1) brightness(2); /* Mengubah ikon hitam menjadi putih terang */
+}
+
+/* 2. Mengubah Tab Kategori Menu Menjadi Gaya Teks + Garis Bawah (Underline) */
+.nav-pills .nav-link,
+.category-tabs a,
+.category-nav a {
+  background-color: transparent !important;
+  color: var(--text-muted) !important;
+  border: none !important;
+  border-bottom: 3px solid transparent !important;
+  border-radius: 0 !important;
+  font-weight: 500;
+  padding: 10px 16px !important;
+  transition: all 0.2s ease;
+}
+
+/* Tampilan saat kategori sedang dipilih (Active) atau disentuh kursor */
+.nav-pills .nav-link.active,
+.nav-pills .nav-link:hover,
+.category-tabs a.active,
+.category-tabs a:hover,
+.category-nav a.active,
+.category-nav a:hover {
+  background-color: transparent !important;
+  color: var(--espresso-primary) !important;
+  border-bottom: 3px solid var(--caramel-accent) !important;
+  font-weight: 700 !important;
+}
+
+/* Memberi jarak napas saat tab kategori diklik (#kat-...) */
+html {
+  scroll-behavior: smooth; /* Efek scroll jadi halus, tidak langsung loncat */
+}
+
+[id^="kat-"] {
+  scroll-margin-top: 135px !important; /* Jarak aman di bawah navbar & tab kategori */
+  padding-top: 10px;
+}
+
+/* === TAMPILAN ADMIN & FILTER STATUS === */
+/* Tombol filter status pesanan (Semua, Pending, dll.) */
+.btn-outline-secondary,
+.filter-btn {
+  color: var(--espresso-primary) !important;
+  border-color: var(--border-soft) !important;
+  background-color: #ffffff !important;
+  border-radius: 8px !important;
+  font-weight: 500;
+}
+
+.btn-outline-secondary:hover,
+.filter-btn:hover {
+  background-color: var(--latte-bg) !important;
+  border-color: var(--caramel-accent) !important;
+}
+
+/* Tombol filter yang sedang aktif (menggantikan kotak hitam) */
+.btn-secondary,
+.btn-dark.active,
+.filter-btn.active {
+  background-color: var(--espresso-primary) !important;
+  border-color: var(--espresso-primary) !important;
+  color: #ffffff !important;
+}
+
+/* Menu navigasi di Offcanvas / Sidebar */
+.offcanvas .nav-link,
+aside .nav-link {
+  color: var(--text-dark) !important;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.offcanvas .nav-link:hover,
+.offcanvas .nav-link.active,
+aside .nav-link:hover,
+aside .nav-link.active {
+  background-color: var(--latte-bg) !important;
+  color: var(--espresso-primary) !important;
+  font-weight: 700 !important;
+}
+
+/* === HALAMAN LOGIN & REGISTER === */
+.auth-card {
+  border-radius: 20px !important;
+  box-shadow: 0 10px 30px rgba(74, 44, 42, 0.08) !important;
+}
+
+.auth-badge {
+  background-color: var(--latte-bg);
+  color: var(--espresso-primary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 5px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border-soft);
+}
+
+.auth-input {
+  border-radius: 10px !important;
+  border: 1.5px solid var(--border-soft) !important;
+  padding: 10px 14px !important;
+  font-size: 0.92rem;
+  background-color: #fdfcfb !important;
+  transition: all 0.2s ease;
+}
+
+.auth-input:focus {
+  border-color: var(--caramel-accent) !important;
+  background-color: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(200, 125, 85, 0.15) !important;
+}
+
+.auth-link {
+  color: var(--caramel-accent) !important;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.auth-link:hover {
+  color: var(--espresso-primary) !important;
+  text-decoration: underline;
+}
+
+/* Membatasi deskripsi maksimal 2 baris agar tinggi kartu sejajar rata */
+.card-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2; /* Tambahkan baris ini agar peringatan di VS Code hilang */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.6em;
+  line-height: 1.35;
+}
+
+/* === OVERRIDE KHUSUS KARTU MENU INDEX.PHP === */
+[id^="menu-grid-"] .card {
+  overflow: hidden !important;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease !important;
+}
+
+[id^="menu-grid-"] .card:hover {
+  transform: translateY(-5px) !important;
+  border-color: var(--caramel-accent) !important;
+  box-shadow: 0 12px 24px rgba(74, 44, 42, 0.14) !important;
+}
+
+[id^="menu-grid-"] .menu-card-img {
+  transition: transform 0.35s ease !important;
+}
+
+[id^="menu-grid-"] .card:hover .menu-card-img {
+  transform: scale(1.04) !important;
+}
+
+/* Warna harga menjadi Caramel dan lebih menonjol */
+[id^="menu-grid-"] .card-body p.fw-bold {
+  color: var(--caramel-accent) !important;
+  font-size: 0.98rem !important;
+  margin-top: 4px;
+}
+
+/* Merapikan garis pemisah tombol Pesan di bagian bawah kartu */
+[id^="menu-grid-"] .card-footer {
+  border-top: none !important;
+  padding-top: 0 !important;
+}

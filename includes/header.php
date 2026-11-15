@@ -19,6 +19,7 @@ if (!isset($base_path)) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cafe Kita</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/cafe-app/assets/style.css">
 </head>
 <body>
 <nav class="navbar bg-body-tertiary border-bottom sticky-top">
