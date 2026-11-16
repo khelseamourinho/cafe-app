@@ -517,10 +517,15 @@ document.getElementById('btnManualRefresh').addEventListener('click', function()
     var btn     = this;
     var iconSvg = document.getElementById('iconRefresh');
 
-    // Animasi putaran pada ikon refresh
+    // Animasi putaran berulang pada ikon refresh selama loading
+    iconSvg.style.transition = 'transform 0.6s linear';
     iconSvg.style.transform  = 'rotate(360deg)';
-    iconSvg.style.transition = 'transform 0.6s ease';
-    btn.disabled             = true;
+    var rotasi = 360;
+    var intervalAnimasi = setInterval(function() {
+        rotasi += 360;
+        iconSvg.style.transform = 'rotate(' + rotasi + 'deg)';
+    }, 600);
+    btn.disabled = true;
 
     // Simpan posisi scroll saat ini sebelum update DOM
     var savedScrollTop = window.scrollY || document.documentElement.scrollTop;
@@ -556,11 +561,11 @@ document.getElementById('btnManualRefresh').addEventListener('click', function()
         tampilkanToast('❌ Gagal memuat ulang daftar pesanan.', 'danger', 5000);
     })
     .finally(function() {
-        // Reset animasi ikon dan aktifkan kembali tombol
-        setTimeout(function() {
-            iconSvg.style.transform  = 'rotate(0deg)';
-            iconSvg.style.transition = 'transform 0s';
-        }, 100);
+        // Hentikan animasi putaran dan reset ikon
+        clearInterval(intervalAnimasi);
+        iconSvg.style.transition = 'transform 0.3s ease';
+        iconSvg.style.transform  = 'rotate(0deg)';
+
         btn.disabled  = false;
         sedangRefresh = false;
     });
@@ -585,67 +590,77 @@ document.addEventListener('click', function(e) {
 
     document.getElementById('batalAdmin-id-order').textContent      = '#' + _batalAdminId;
     document.getElementById('batalAdmin-nama-customer').textContent = _batalAdminCustomer;
-    document.getElementById('batalAdmin-status').textContent        = _batalAdminStatus;
+
+    // Update badge status di modal konfirmasi dengan warna yang sesuai
+    var badgeStatus = document.getElementById('batalAdmin-status');
+    badgeStatus.textContent = _batalAdminStatus;
+    badgeStatus.className   = 'badge ' + getBadgeClass(_batalAdminStatus);
 
     var modalEl = document.getElementById('modalKonfirmasiBatalAdmin');
     bootstrap.Modal.getOrCreateInstance(modalEl).show();
 });
 
-document.getElementById('btnKonfirmasiBatalAdmin') &&
-document.getElementById('btnKonfirmasiBatalAdmin').addEventListener('click', function() {
-    if (!_batalAdminId) return;
+// Handler "Ya, Batalkan Pesanan" — didaftarkan lewat DOMContentLoaded
+// agar elemen modal yang ada di bawah <script> sudah tersedia di DOM
+document.addEventListener('DOMContentLoaded', function() {
+    var btnKonfirmasi = document.getElementById('btnKonfirmasiBatalAdmin');
+    if (!btnKonfirmasi) return;
 
-    var idOrder = _batalAdminId;
-    var btn = this;
-    btn.disabled    = true;
-    btn.textContent = 'Memproses...';
+    btnKonfirmasi.addEventListener('click', function() {
+        if (!_batalAdminId) return;
 
-    var formData = new FormData();
-    formData.append('action',   'batalkan_pesanan');
-    formData.append('id_order', idOrder);
+        var idOrder = _batalAdminId;
+        var btn = this;
+        btn.disabled    = true;
+        btn.textContent = 'Memproses...';
 
-    fetch('kelola_pesanan.php', { method: 'POST', body: formData })
-        .then(function(res) { return res.json(); })
-        .then(function(data) {
-            bootstrap.Modal.getInstance(document.getElementById('modalKonfirmasiBatalAdmin')).hide();
+        var formData = new FormData();
+        formData.append('action',   'batalkan_pesanan');
+        formData.append('id_order', idOrder);
 
-            if (data.success) {
-                // Update badge kartu → merah Dibatalkan
-                var badgeEl = document.getElementById('badge-' + idOrder);
-                if (badgeEl) {
-                    badgeEl.className   = 'badge fs-6 bg-danger';
-                    badgeEl.textContent = 'Dibatalkan';
+        fetch('kelola_pesanan.php', { method: 'POST', body: formData })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                bootstrap.Modal.getInstance(document.getElementById('modalKonfirmasiBatalAdmin')).hide();
+
+                if (data.success) {
+                    // Update badge kartu → merah Dibatalkan
+                    var badgeEl = document.getElementById('badge-' + idOrder);
+                    if (badgeEl) {
+                        badgeEl.className   = 'badge fs-6 bg-danger';
+                        badgeEl.textContent = 'Dibatalkan';
+                    }
+                    // Update data-status kartu
+                    var cardEl = document.getElementById('order-card-' + idOrder);
+                    if (cardEl) cardEl.dataset.status = 'Dibatalkan';
+
+                    // Ganti area aksi (form ubah status) dengan teks pembatalan
+                    var formEl = cardEl ? cardEl.querySelector('.form-ubah-status') : null;
+                    if (formEl) {
+                        formEl.outerHTML =
+                            '<p class="text-danger small mb-0">❌ Pesanan ini telah dibatalkan.</p>';
+                    }
+                    // Sembunyikan tombol batalkan juga
+                    var btnBatal = cardEl ? cardEl.querySelector('.btn-batal-order-admin') : null;
+                    if (btnBatal) {
+                        var wrapper = btnBatal.closest('div');
+                        if (wrapper) wrapper.remove();
+                    }
+
+                    tampilkanToast('✅ ' + data.message, 'success');
+                } else {
+                    tampilkanToast('❌ ' + (data.message || 'Gagal membatalkan pesanan.'), 'danger', 5000);
                 }
-                // Update data-status kartu
-                var cardEl = document.getElementById('order-card-' + idOrder);
-                if (cardEl) cardEl.dataset.status = 'Dibatalkan';
-
-                // Ganti area aksi tombol dengan teks pembatalan
-                var formEl = cardEl ? cardEl.querySelector('.form-ubah-status') : null;
-                if (formEl) {
-                    formEl.closest('.card-body').querySelector('.form-ubah-status').outerHTML =
-                        '<p class="text-danger small mb-0">❌ Pesanan ini telah dibatalkan.</p>';
-                }
-                // Sembunyikan tombol batalkan juga
-                var btnBatal = cardEl ? cardEl.querySelector('.btn-batal-order-admin') : null;
-                if (btnBatal) {
-                    var wrapper = btnBatal.closest('div');
-                    if (wrapper) wrapper.remove();
-                }
-
-                tampilkanToast('✅ ' + data.message, 'success');
-            } else {
-                tampilkanToast('❌ ' + (data.message || 'Gagal membatalkan pesanan.'), 'danger', 5000);
-            }
-        })
-        .catch(function() {
-            tampilkanToast('❌ Gagal menghubungi server.', 'danger', 5000);
-        })
-        .finally(function() {
-            btn.disabled    = false;
-            btn.textContent = 'Ya, Batalkan Pesanan';
-            _batalAdminId = _batalAdminCustomer = _batalAdminStatus = null;
-        });
+            })
+            .catch(function() {
+                tampilkanToast('❌ Gagal menghubungi server.', 'danger', 5000);
+            })
+            .finally(function() {
+                btn.disabled    = false;
+                btn.textContent = 'Ya, Batalkan Pesanan';
+                _batalAdminId = _batalAdminCustomer = _batalAdminStatus = null;
+            });
+    });
 });
 </script>
 
