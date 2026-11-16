@@ -339,316 +339,6 @@ require '../includes/header.php';
 <?php endforeach; ?>
 </div><!-- /#daftarPesananContainer -->
 
-<script>
-/* ═══════════════════════════════════════════════════════════════════════════
-   kelola_pesanan.php — JavaScript AJAX
-   1. AJAX Submit Status  : ubah status tanpa reload, scroll tetap stabil
-   2. AJAX Refresh Manual : tombol Segarkan Pesanan, scroll tetap stabil
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-// ─── Pemetaan warna badge (mirror dari PHP $warna_badge) ─────────────────────
-const WARNA_BADGE = {
-    'Pending'      : 'bg-warning text-dark',
-    'Sedang Dibuat': 'bg-info text-dark',
-    'Siap Pick-up' : 'bg-primary',
-    'Selesai'      : 'bg-success',
-    'Dibatalkan'   : 'bg-danger'
-};
-
-/* ═══════════════════════════════════════════════════════════════════════
-   VARIABEL KONTEKS MODAL KONFIRMASI
-   Menyimpan referensi form aktif & FormData saat modal konfirmasi terbuka,
-   agar bisa digunakan oleh handler tombol konfirmasi di dalam modal.
-   ═══════════════════════════════════════════════════════════════════════ */
-var _formAktif      = null;  // Form .form-ubah-status yang sedang dikonfirmasi
-var _formDataAktif  = null;  // FormData dari form tersebut
-var _selectAktif    = null;  // Elemen <select> dari form tersebut
-var _btnSimpanAktif = null;  // Tombol simpan pada form tersebut
-var _statusSebelumnya = null; // Nilai select sebelum diganti (untuk reset saat batal)
-
-// Referensi elemen Modal Bootstrap
-var modalKonfirmasiEl = document.getElementById('modalKonfirmasiStatus');
-var bsModalKonfirmasi = new bootstrap.Modal(modalKonfirmasiEl);
-
-/* ═══════════════════════════════════════════════════════════════════════
-   HELPER: Dapatkan label & class badge berdasarkan nilai status
-   ═══════════════════════════════════════════════════════════════════════ */
-function getBadgeClass(status) {
-    return WARNA_BADGE[status] || 'bg-secondary';
-}
-
-/* ═══════════════════════════════════════════════════════════════════════
-   FITUR 1 — AJAX Submit Status dengan Pop-up Modal Konfirmasi
-   Menggantikan window.confirm() lama dengan modal Bootstrap interaktif.
-   ═══════════════════════════════════════════════════════════════════════ */
-document.addEventListener('submit', function(e) {
-    // Tangkap hanya form dengan class .form-ubah-status
-    if (!e.target.classList.contains('form-ubah-status')) return;
-    e.preventDefault(); // Cegah submit konvensional (cegah reload halaman)
-
-    var form       = e.target;
-    var select     = form.querySelector('select[name="status_pesanan"]');
-    var orderId    = form.dataset.orderId;
-    var statusBaru = select.value;
-
-    // Simpan referensi ke konteks modal
-    _formAktif        = form;
-    _formDataAktif    = new FormData(form);
-    _selectAktif      = select;
-    _btnSimpanAktif   = form.querySelector('.btn-simpan-status');
-
-    // Cari status lama dari data-status pada kartu pesanan
-    var cardEl     = document.getElementById('order-card-' + orderId);
-    var statusLama = cardEl ? cardEl.dataset.status : '—';
-
-    // Ambil nama customer dari kartu pesanan (dari elemen span dalam card-header)
-    var namaCustomer = '—';
-    if (cardEl) {
-        var spanCustomer = cardEl.querySelector('.card-header span');
-        if (spanCustomer) namaCustomer = spanCustomer.textContent.trim();
-    }
-
-    // Injeksi data ke dalam body modal
-    document.getElementById('konfirm-id-order').textContent      = '#' + orderId;
-    document.getElementById('konfirm-nama-customer').textContent = namaCustomer;
-
-    var konfirmStatusLama = document.getElementById('konfirm-status-lama');
-    konfirmStatusLama.className = 'badge fs-6 ' + getBadgeClass(statusLama);
-    konfirmStatusLama.textContent = statusLama;
-
-    var konfirmStatusBaru = document.getElementById('konfirm-status-baru');
-    konfirmStatusBaru.className = 'badge fs-6 ' + getBadgeClass(statusBaru);
-    konfirmStatusBaru.textContent = statusBaru;
-
-    // Tampilkan modal konfirmasi
-    bsModalKonfirmasi.show();
-});
-
-/* ─── Handler tombol "Ya, Ubah Status" di dalam modal ──────────────────────── */
-document.getElementById('btnKonfirmasiUbahStatus').addEventListener('click', function() {
-    // Tutup modal terlebih dahulu
-    bsModalKonfirmasi.hide();
-
-    // Pastikan konteks form masih valid
-    if (!_formAktif || !_formDataAktif || !_selectAktif || !_btnSimpanAktif) return;
-
-    var form      = _formAktif;
-    var formData  = _formDataAktif;
-    var select    = _selectAktif;
-    var btnSimpan = _btnSimpanAktif;
-    var orderId   = form.dataset.orderId;
-
-    // Nonaktifkan tombol agar tidak diklik ganda
-    btnSimpan.disabled    = true;
-    btnSimpan.textContent = 'Menyimpan...';
-
-    // Kirim request AJAX ke backend
-    fetch('kelola_pesanan.php', {
-        method : 'POST',
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }, // Penanda AJAX untuk PHP
-        body   : formData
-    })
-    .then(function(res) { return res.json(); })
-    .then(function(data) {
-        if (data.success) {
-            // ── Update badge warna & teks secara instan ──────────────────
-            var badgeEl = document.getElementById('badge-' + data.id_order);
-            if (badgeEl) {
-                badgeEl.className   = 'badge fs-6 ' + (WARNA_BADGE[data.status_baru] || 'bg-secondary');
-                badgeEl.textContent = data.status_baru;
-            }
-            // Update atribut data-status pada kartu
-            var cardEl = document.getElementById('order-card-' + data.id_order);
-            if (cardEl) {
-                cardEl.dataset.status = data.status_baru;
-            }
-            // Nonaktifkan opsi status yang sudah terlewati pada <select>
-            var statusUrutan = ['Pending', 'Sedang Dibuat', 'Siap Pick-up', 'Selesai'];
-            var idxBaru      = statusUrutan.indexOf(data.status_baru);
-            var opts         = select.options;
-            for (var i = 0; i < opts.length; i++) {
-                if (statusUrutan.indexOf(opts[i].value) < idxBaru) {
-                    opts[i].disabled = true;
-                }
-            }
-            // Jika status sudah Selesai, sembunyikan form dan tampilkan teks pengunci
-            if (data.status_baru === 'Selesai') {
-                form.outerHTML = '<p class="text-muted small mb-0">✅ Pesanan ini sudah selesai dan tidak dapat diubah.</p>';
-            }
-            // Tampilkan Pop-up Toast sukses (menggantikan alert statis)
-            tampilkanToast('✅ ' + data.message, 'success');
-        } else {
-            // Tampilkan Pop-up Toast error
-            tampilkanToast('❌ ' + (data.message || 'Gagal memperbarui status.'), 'danger', 5000);
-            btnSimpan.disabled    = false;
-            btnSimpan.textContent = 'Simpan';
-        }
-        // Reset konteks setelah selesai
-        _formAktif = _formDataAktif = _selectAktif = _btnSimpanAktif = null;
-    })
-    .catch(function() {
-        tampilkanToast('❌ Gagal menghubungi server. Periksa koneksi Anda.', 'danger', 5000);
-        btnSimpan.disabled    = false;
-        btnSimpan.textContent = 'Simpan';
-        _formAktif = _formDataAktif = _selectAktif = _btnSimpanAktif = null;
-    });
-});
-
-/* ─── Reset konteks saat modal ditutup via tombol Batal / klik luar ──────────
-   Mencegah eksekusi AJAX tidak sengaja jika modal ditutup tanpa konfirmasi. */
-modalKonfirmasiEl.addEventListener('hidden.bs.modal', function() {
-    // Jika ditutup tanpa mengklik tombol konfirmasi, reset semua state
-    if (_formAktif !== null) {
-        _formAktif = _formDataAktif = _selectAktif = _btnSimpanAktif = null;
-    }
-});
-
-/* ═══════════════════════════════════════════════════════════════
-   FITUR 2 — AJAX Refresh Manual (Tombol Segarkan Pesanan)
-   Memperbarui #daftarPesananContainer tanpa reload browser.
-   Posisi scroll admin dipertahankan setelah refresh parsial.
-   ═══════════════════════════════════════════════════════════════ */
-var sedangRefresh = false; // Flag: cegah klik ganda saat loading
-
-document.getElementById('btnManualRefresh').addEventListener('click', function() {
-    if (sedangRefresh) return; // Abaikan spam klik
-    sedangRefresh = true;
-
-    var btn     = this;
-    var iconSvg = document.getElementById('iconRefresh');
-
-    // Animasi putaran pada ikon refresh
-    iconSvg.style.transform  = 'rotate(360deg)';
-    iconSvg.style.transition = 'transform 0.6s ease';
-    btn.disabled             = true;
-
-    // Simpan posisi scroll saat ini sebelum update DOM
-    var savedScrollTop = window.scrollY || document.documentElement.scrollTop;
-
-    // Baca filter aktif dari URL agar refresh tetap mempertahankan filter
-    var currentUrl = window.location.search; // contoh: "?status=Pending"
-
-    // Ambil HTML halaman yang sama dengan filter aktif
-    fetch('kelola_pesanan.php' + currentUrl, {
-        headers: { 'X-Requested-With': 'XMLHttpRequest-PartialRefresh' }
-    })
-    .then(function(res) { return res.text(); })
-    .then(function(html) {
-        // Parsing HTML dengan DOMParser (aman, tanpa eval)
-        var parser = new DOMParser();
-        var doc    = parser.parseFromString(html, 'text/html');
-
-        // Ambil hanya konten #daftarPesananContainer dari halaman baru
-        var newContainer = doc.getElementById('daftarPesananContainer');
-        var oldContainer = document.getElementById('daftarPesananContainer');
-
-        if (newContainer && oldContainer) {
-            oldContainer.innerHTML = newContainer.innerHTML;
-        }
-
-        // ── Kembalikan posisi scroll ke koordinat semula ──────────────────
-        window.scrollTo({ top: savedScrollTop, behavior: 'instant' });
-
-        // Tampilkan Pop-up Toast (menggantikan alert statis)
-        tampilkanToast('🔄 Daftar pesanan telah diperbarui.', 'success');
-    })
-    .catch(function() {
-        tampilkanToast('❌ Gagal memuat ulang daftar pesanan.', 'danger', 5000);
-    })
-    .finally(function() {
-        // Reset animasi ikon dan aktifkan kembali tombol
-        setTimeout(function() {
-            iconSvg.style.transform  = 'rotate(0deg)';
-            iconSvg.style.transition = 'transform 0s';
-        }, 100);
-        btn.disabled  = false;
-        sedangRefresh = false;
-    });
-});
-
-/* ═══════════════════════════════════════════════════════════════
-   FITUR 3 — Pembatalan Pesanan oleh Admin
-   Handler untuk tombol .btn-batal-order-admin + Modal Konfirmasi
-   ═══════════════════════════════════════════════════════════════ */
-var _batalAdminId       = null;
-var _batalAdminCustomer = null;
-var _batalAdminStatus   = null;
-
-// Tangkap klik pada tombol batal (event delegation karena kartu bisa di-refresh)
-document.addEventListener('click', function(e) {
-    var btn = e.target.closest('.btn-batal-order-admin');
-    if (!btn) return;
-
-    _batalAdminId       = btn.dataset.id;
-    _batalAdminCustomer = btn.dataset.customer;
-    _batalAdminStatus   = btn.dataset.status;
-
-    document.getElementById('batalAdmin-id-order').textContent      = '#' + _batalAdminId;
-    document.getElementById('batalAdmin-nama-customer').textContent = _batalAdminCustomer;
-    document.getElementById('batalAdmin-status').textContent        = _batalAdminStatus;
-
-    var modalEl = document.getElementById('modalKonfirmasiBatalAdmin');
-    bootstrap.Modal.getOrCreateInstance(modalEl).show();
-});
-
-document.getElementById('btnKonfirmasiBatalAdmin') &&
-document.getElementById('btnKonfirmasiBatalAdmin').addEventListener('click', function() {
-    if (!_batalAdminId) return;
-
-    var idOrder = _batalAdminId;
-    var btn = this;
-    btn.disabled    = true;
-    btn.textContent = 'Memproses...';
-
-    var formData = new FormData();
-    formData.append('action',   'batalkan_pesanan');
-    formData.append('id_order', idOrder);
-
-    fetch('kelola_pesanan.php', { method: 'POST', body: formData })
-        .then(function(res) { return res.json(); })
-        .then(function(data) {
-            bootstrap.Modal.getInstance(document.getElementById('modalKonfirmasiBatalAdmin')).hide();
-
-            if (data.success) {
-                // Update badge kartu → merah Dibatalkan
-                var badgeEl = document.getElementById('badge-' + idOrder);
-                if (badgeEl) {
-                    badgeEl.className   = 'badge fs-6 bg-danger';
-                    badgeEl.textContent = 'Dibatalkan';
-                }
-                // Update data-status kartu
-                var cardEl = document.getElementById('order-card-' + idOrder);
-                if (cardEl) cardEl.dataset.status = 'Dibatalkan';
-
-                // Ganti area aksi tombol dengan teks pembatalan
-                var formEl = cardEl ? cardEl.querySelector('.form-ubah-status') : null;
-                if (formEl) {
-                    formEl.closest('.card-body').querySelector('.form-ubah-status').outerHTML =
-                        '<p class="text-danger small mb-0">❌ Pesanan ini telah dibatalkan.</p>';
-                }
-                // Sembunyikan tombol batalkan juga
-                var btnBatal = cardEl ? cardEl.querySelector('.btn-batal-order-admin') : null;
-                if (btnBatal) {
-                    var wrapper = btnBatal.closest('div');
-                    if (wrapper) wrapper.remove();
-                }
-
-                tampilkanToast('✅ ' + data.message, 'success');
-            } else {
-                tampilkanToast('❌ ' + (data.message || 'Gagal membatalkan pesanan.'), 'danger', 5000);
-            }
-        })
-        .catch(function() {
-            tampilkanToast('❌ Gagal menghubungi server.', 'danger', 5000);
-        })
-        .finally(function() {
-            btn.disabled    = false;
-            btn.textContent = 'Ya, Batalkan Pesanan';
-            _batalAdminId = _batalAdminCustomer = _batalAdminStatus = null;
-        });
-});
-</script>
-
 <!-- ══════════════ MODAL KONFIRMASI BATAL ADMIN ══════════════ -->
 <div class="modal fade" id="modalKonfirmasiBatalAdmin" tabindex="-1" aria-labelledby="labelBatalAdmin" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" style="max-width:440px">
@@ -686,5 +376,298 @@ document.getElementById('btnKonfirmasiBatalAdmin').addEventListener('click', fun
         </div>
     </div>
 </div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   kelola_pesanan.php — JavaScript AJAX
+   Semua kode JS diletakkan SETELAH modal #modalKonfirmasiBatalAdmin
+   agar getElementById tidak mengembalikan null saat dieksekusi.
+   ═══════════════════════════════════════════════════════════════════════════
+   CATATAN URUTAN:
+   - Script ini berada setelah kedua modal HTML → semua getElementById aman.
+   - Bootstrap JS di-load di footer.php (SETELAH </main>).
+   - Oleh karena itu semua inisialisasi Bootstrap (new bootstrap.Modal, dll.)
+     dibungkus dalam DOMContentLoaded agar Bootstrap sudah tersedia.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+// ─── Pemetaan warna badge (mirror dari PHP $warna_badge) ─────────────────────
+const WARNA_BADGE = {
+    'Pending'      : 'bg-warning text-dark',
+    'Sedang Dibuat': 'bg-info text-dark',
+    'Siap Pick-up' : 'bg-primary',
+    'Selesai'      : 'bg-success',
+    'Dibatalkan'   : 'bg-danger'
+};
+
+/* ═══════════════════════════════════════════════════════════════════════
+   VARIABEL KONTEKS MODAL KONFIRMASI UBAH STATUS
+   ═══════════════════════════════════════════════════════════════════════ */
+var _formAktif        = null;
+var _formDataAktif    = null;
+var _selectAktif      = null;
+var _btnSimpanAktif   = null;
+var _statusSebelumnya = null;
+
+/* ═══════════════════════════════════════════════════════════════════════
+   VARIABEL KONTEKS MODAL KONFIRMASI BATALKAN PESANAN ADMIN
+   ═══════════════════════════════════════════════════════════════════════ */
+var _batalAdminId       = null;
+var _batalAdminCustomer = null;
+var _batalAdminStatus   = null;
+
+/* ═══════════════════════════════════════════════════════════════════════
+   HELPER: Dapatkan class badge berdasarkan nilai status
+   ═══════════════════════════════════════════════════════════════════════ */
+function getBadgeClass(status) {
+    return WARNA_BADGE[status] || 'bg-secondary';
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Semua inisialisasi dan event handler di dalam DOMContentLoaded
+   agar Bootstrap JS (di-load di footer) sudah siap digunakan.
+   ═══════════════════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', function () {
+
+    // ── Inisialisasi instance Bootstrap Modal ────────────────────────────
+    var modalKonfirmasiEl  = document.getElementById('modalKonfirmasiStatus');
+    var bsModalKonfirmasi  = new bootstrap.Modal(modalKonfirmasiEl);
+
+    /* ═══════════════════════════════════════════════════════════════════
+       FITUR 1 — AJAX Submit Status dengan Pop-up Modal Konfirmasi
+       ═══════════════════════════════════════════════════════════════════ */
+    document.addEventListener('submit', function (e) {
+        if (!e.target.classList.contains('form-ubah-status')) return;
+        e.preventDefault();
+
+        var form       = e.target;
+        var select     = form.querySelector('select[name="status_pesanan"]');
+        var orderId    = form.dataset.orderId;
+        var statusBaru = select.value;
+
+        _formAktif      = form;
+        _formDataAktif  = new FormData(form);
+        _selectAktif    = select;
+        _btnSimpanAktif = form.querySelector('.btn-simpan-status');
+
+        var cardEl     = document.getElementById('order-card-' + orderId);
+        var statusLama = cardEl ? cardEl.dataset.status : '—';
+
+        var namaCustomer = '—';
+        if (cardEl) {
+            var spanCustomer = cardEl.querySelector('.card-header span');
+            if (spanCustomer) namaCustomer = spanCustomer.textContent.trim();
+        }
+
+        document.getElementById('konfirm-id-order').textContent      = '#' + orderId;
+        document.getElementById('konfirm-nama-customer').textContent = namaCustomer;
+
+        var konfirmStatusLama = document.getElementById('konfirm-status-lama');
+        konfirmStatusLama.className   = 'badge fs-6 ' + getBadgeClass(statusLama);
+        konfirmStatusLama.textContent = statusLama;
+
+        var konfirmStatusBaru = document.getElementById('konfirm-status-baru');
+        konfirmStatusBaru.className   = 'badge fs-6 ' + getBadgeClass(statusBaru);
+        konfirmStatusBaru.textContent = statusBaru;
+
+        bsModalKonfirmasi.show();
+    });
+
+    /* ─── Handler tombol "Ya, Ubah Status" ─────────────────────────────── */
+    document.getElementById('btnKonfirmasiUbahStatus').addEventListener('click', function () {
+        bsModalKonfirmasi.hide();
+        if (!_formAktif || !_formDataAktif || !_selectAktif || !_btnSimpanAktif) return;
+
+        var form      = _formAktif;
+        var formData  = _formDataAktif;
+        var select    = _selectAktif;
+        var btnSimpan = _btnSimpanAktif;
+        var orderId   = form.dataset.orderId;
+
+        btnSimpan.disabled    = true;
+        btnSimpan.textContent = 'Menyimpan...';
+
+        fetch('kelola_pesanan.php', {
+            method : 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body   : formData
+        })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+            if (data.success) {
+                var badgeEl = document.getElementById('badge-' + data.id_order);
+                if (badgeEl) {
+                    badgeEl.className   = 'badge fs-6 ' + (WARNA_BADGE[data.status_baru] || 'bg-secondary');
+                    badgeEl.textContent = data.status_baru;
+                }
+                var cardEl = document.getElementById('order-card-' + data.id_order);
+                if (cardEl) cardEl.dataset.status = data.status_baru;
+
+                var statusUrutan = ['Pending', 'Sedang Dibuat', 'Siap Pick-up', 'Selesai'];
+                var idxBaru      = statusUrutan.indexOf(data.status_baru);
+                var opts         = select.options;
+                for (var i = 0; i < opts.length; i++) {
+                    if (statusUrutan.indexOf(opts[i].value) < idxBaru) opts[i].disabled = true;
+                }
+                if (data.status_baru === 'Selesai') {
+                    form.outerHTML = '<p class="text-muted small mb-0">✅ Pesanan ini sudah selesai dan tidak dapat diubah.</p>';
+                }
+                tampilkanToast('✅ ' + data.message, 'success');
+            } else {
+                tampilkanToast('❌ ' + (data.message || 'Gagal memperbarui status.'), 'danger', 5000);
+                btnSimpan.disabled    = false;
+                btnSimpan.textContent = 'Simpan';
+            }
+            _formAktif = _formDataAktif = _selectAktif = _btnSimpanAktif = null;
+        })
+        .catch(function () {
+            tampilkanToast('❌ Gagal menghubungi server. Periksa koneksi Anda.', 'danger', 5000);
+            btnSimpan.disabled    = false;
+            btnSimpan.textContent = 'Simpan';
+            _formAktif = _formDataAktif = _selectAktif = _btnSimpanAktif = null;
+        });
+    });
+
+    /* ─── Reset konteks saat modal ubah status ditutup ──────────────────── */
+    modalKonfirmasiEl.addEventListener('hidden.bs.modal', function () {
+        if (_formAktif !== null) {
+            _formAktif = _formDataAktif = _selectAktif = _btnSimpanAktif = null;
+        }
+    });
+
+    /* ═══════════════════════════════════════════════════════════════
+       FITUR 2 — AJAX Refresh Manual (Tombol Segarkan Pesanan)
+       ═══════════════════════════════════════════════════════════════ */
+    var sedangRefresh = false;
+
+    document.getElementById('btnManualRefresh').addEventListener('click', function () {
+        if (sedangRefresh) return;
+        sedangRefresh = true;
+
+        var btn     = this;
+        var iconSvg = document.getElementById('iconRefresh');
+
+        iconSvg.style.transition = 'transform 0.6s linear';
+        iconSvg.style.transform  = 'rotate(360deg)';
+        var rotasi = 360;
+        var intervalAnimasi = setInterval(function () {
+            rotasi += 360;
+            iconSvg.style.transform = 'rotate(' + rotasi + 'deg)';
+        }, 600);
+        btn.disabled = true;
+
+        var savedScrollTop = window.scrollY || document.documentElement.scrollTop;
+        var currentUrl     = window.location.search;
+
+        fetch('kelola_pesanan.php' + currentUrl, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest-PartialRefresh' }
+        })
+        .then(function (res) { return res.text(); })
+        .then(function (html) {
+            var parser       = new DOMParser();
+            var doc          = parser.parseFromString(html, 'text/html');
+            var newContainer = doc.getElementById('daftarPesananContainer');
+            var oldContainer = document.getElementById('daftarPesananContainer');
+            if (newContainer && oldContainer) {
+                oldContainer.innerHTML = newContainer.innerHTML;
+            }
+            window.scrollTo({ top: savedScrollTop, behavior: 'instant' });
+            tampilkanToast('🔄 Daftar pesanan telah diperbarui.', 'success');
+        })
+        .catch(function () {
+            tampilkanToast('❌ Gagal memuat ulang daftar pesanan.', 'danger', 5000);
+        })
+        .finally(function () {
+            clearInterval(intervalAnimasi);
+            iconSvg.style.transition = 'transform 0.3s ease';
+            iconSvg.style.transform  = 'rotate(0deg)';
+            btn.disabled  = false;
+            sedangRefresh = false;
+        });
+    });
+
+    /* ═══════════════════════════════════════════════════════════════
+       FITUR 3 — Pembatalan Pesanan oleh Admin
+       Event delegation pada document agar tetap bekerja setelah
+       #daftarPesananContainer di-refresh (innerHTML diganti).
+       ═══════════════════════════════════════════════════════════════ */
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest('.btn-batal-order-admin');
+        if (!btn) return;
+
+        _batalAdminId       = btn.dataset.id;
+        _batalAdminCustomer = btn.dataset.customer;
+        _batalAdminStatus   = btn.dataset.status;
+
+        document.getElementById('batalAdmin-id-order').textContent      = '#' + _batalAdminId;
+        document.getElementById('batalAdmin-nama-customer').textContent = _batalAdminCustomer;
+
+        var badgeStatus     = document.getElementById('batalAdmin-status');
+        badgeStatus.textContent = _batalAdminStatus;
+        badgeStatus.className   = 'badge ' + getBadgeClass(_batalAdminStatus);
+
+        bootstrap.Modal.getOrCreateInstance(
+            document.getElementById('modalKonfirmasiBatalAdmin')
+        ).show();
+    });
+
+    /* ─── Handler "Ya, Batalkan Pesanan" ───────────────────────────────── */
+    var btnKonfirmasiBatal = document.getElementById('btnKonfirmasiBatalAdmin');
+    if (btnKonfirmasiBatal) {
+        btnKonfirmasiBatal.addEventListener('click', function () {
+            if (!_batalAdminId) return;
+
+            var idOrder = _batalAdminId;
+            var btn     = this;
+            btn.disabled    = true;
+            btn.textContent = 'Memproses...';
+
+            var formData = new FormData();
+            formData.append('action',   'batalkan_pesanan');
+            formData.append('id_order', idOrder);
+
+            fetch('kelola_pesanan.php', { method: 'POST', body: formData })
+                .then(function (res) { return res.json(); })
+                .then(function (data) {
+                    bootstrap.Modal.getInstance(
+                        document.getElementById('modalKonfirmasiBatalAdmin')
+                    ).hide();
+
+                    if (data.success) {
+                        var badgeEl = document.getElementById('badge-' + idOrder);
+                        if (badgeEl) {
+                            badgeEl.className   = 'badge fs-6 bg-danger';
+                            badgeEl.textContent = 'Dibatalkan';
+                        }
+                        var cardEl = document.getElementById('order-card-' + idOrder);
+                        if (cardEl) cardEl.dataset.status = 'Dibatalkan';
+
+                        var formEl = cardEl ? cardEl.querySelector('.form-ubah-status') : null;
+                        if (formEl) {
+                            formEl.outerHTML =
+                                '<p class="text-danger small mb-0">❌ Pesanan ini telah dibatalkan.</p>';
+                        }
+                        var btnBatal = cardEl ? cardEl.querySelector('.btn-batal-order-admin') : null;
+                        if (btnBatal) {
+                            var wrapper = btnBatal.closest('div');
+                            if (wrapper) wrapper.remove();
+                        }
+                        tampilkanToast('✅ ' + data.message, 'success');
+                    } else {
+                        tampilkanToast('❌ ' + (data.message || 'Gagal membatalkan pesanan.'), 'danger', 5000);
+                    }
+                })
+                .catch(function () {
+                    tampilkanToast('❌ Gagal menghubungi server.', 'danger', 5000);
+                })
+                .finally(function () {
+                    btn.disabled    = false;
+                    btn.textContent = 'Ya, Batalkan Pesanan';
+                    _batalAdminId = _batalAdminCustomer = _batalAdminStatus = null;
+                });
+        });
+    }
+
+}); // ── End DOMContentLoaded ──────────────────────────────────────────────────
+</script>
 
 <?php require '../includes/footer.php'; ?>

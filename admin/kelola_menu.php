@@ -620,3 +620,19 @@ setupPreview('fotoEdit', 'previewEdit', 'previewEditWrap');
 </script>
 
 <?php require '../includes/footer.php'; ?>
+
+<script>
+document.addEventListener('click', function (e) {
+    const btnHapus = e.target.closest('.btn-hapus-item-modal');
+    if (btnHapus) {
+        e.preventDefault();
+        const url  = btnHapus.getAttribute('data-url');
+        const nama = btnHapus.getAttribute('data-nama') || 'item ini';
+        const tipe = btnHapus.getAttribute('data-tipe') || 'data';
+
+        if (confirm(`Yakin ingin menghapus ${tipe} "${nama}"?`)) {
+            window.location.href = url;
+        }
+    }
+});
+</script>

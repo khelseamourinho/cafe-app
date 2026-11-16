@@ -17,9 +17,8 @@ body {
   color: var(--text-dark) !important;
 }
 
-/* Mengubah warna tombol utama (menimpa primary/danger/dark bawaan) */
+/* Mengubah warna tombol utama (menimpa primary/dark bawaan) */
 .btn-primary,
-.btn-danger,
 .btn-dark {
   background-color: var(--espresso-primary) !important;
   border-color: var(--espresso-primary) !important;
@@ -30,16 +29,25 @@ body {
 }
 
 .btn-primary:hover,
-.btn-danger:hover,
 .btn-dark:hover {
   background-color: var(--espresso-hover) !important;
   border-color: var(--espresso-hover) !important;
   transform: translateY(-1px);
 }
 
+/* Tombol danger — tetap merah Bootstrap agar terlihat sebagai aksi bahaya */
+.btn-danger {
+  border-radius: 10px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.btn-danger:hover {
+  transform: translateY(-1px);
+}
+
 /* Tombol garis tepi (outline) */
 .btn-outline-primary,
-.btn-outline-danger,
 .btn-outline-dark {
   color: var(--espresso-primary) !important;
   border-color: var(--espresso-primary) !important;
@@ -47,28 +55,30 @@ body {
 }
 
 .btn-outline-primary:hover,
-.btn-outline-danger:hover,
 .btn-outline-dark:hover {
   background-color: var(--espresso-primary) !important;
   color: #ffffff !important;
 }
 
+/* Tombol outline danger — tetap merah agar terlihat sebagai aksi bahaya */
+.btn-outline-danger {
+  border-radius: 10px;
+}
+
+
 /* Navbar / Header & Elemen Background */
 .navbar,
 .bg-primary,
-.bg-danger,
 .bg-dark {
   background-color: var(--espresso-primary) !important;
 }
 
 /* Aksen Teks & Badge */
-.text-primary,
-.text-danger {
+.text-primary {
   color: var(--caramel-accent) !important;
 }
 
 .badge.bg-primary,
-.badge.bg-danger,
 .badge.bg-warning {
   background-color: var(--caramel-accent) !important;
   color: #ffffff !important;
