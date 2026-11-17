@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 15, 2026 at 06:18 AM
+-- Generation Time: Nov 17, 2026 at 03:27 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -43,10 +43,12 @@ CREATE TABLE `banner` (
 --
 
 INSERT INTO `banner` (`id_image`, `gambar`, `keterangan`, `urutan`, `status`, `created_at`) VALUES
-(5, 'assets/uploads/banner/carousel/banner_carousel_u4_20261102_093239_c1f95539.png', 'carousel_banner', 0, 1, '2026-11-02 08:32:39'),
-(6, 'assets/uploads/banner/popup/banner_popup_u4_20261109_144032_1f201073.png', 'popup_banner', 0, 1, '2026-11-09 13:40:32'),
-(7, 'assets/uploads/banner/carousel/banner_carousel_u4_20261109_144049_c4d958fa.png', 'carousel_banner', 3, 1, '2026-11-09 13:40:49'),
-(8, 'assets/uploads/banner/carousel/banner_carousel_u4_20261109_144113_2d7c2e7d.jpg', 'carousel_banner', 2, 1, '2026-11-09 13:41:13');
+(9, 'assets/uploads/banner/carousel/banner_carousel_u4_20261115_151359_a83a1da6.jpg', 'carousel_banner', 1, 1, '2026-11-15 14:13:59'),
+(10, 'assets/uploads/banner/carousel/banner_carousel_u4_20261115_151444_1d0f8dbc.jpg', 'carousel_banner', 2, 1, '2026-11-15 14:14:44'),
+(11, 'assets/uploads/banner/carousel/banner_carousel_u4_20261115_152118_f3ce98f1.jpg', 'carousel_banner', 0, 1, '2026-11-15 14:21:18'),
+(12, 'assets/uploads/banner/carousel/banner_carousel_u4_20261115_152224_78c7186b.jpg', 'carousel_banner', 3, 1, '2026-11-15 14:22:24'),
+(13, 'assets/uploads/banner/carousel/banner_carousel_u4_20261115_152305_b07f9971.png', 'carousel_banner', 4, 1, '2026-11-15 14:23:05'),
+(14, 'assets/uploads/banner/popup/banner_popup_u4_20261115_154002_e5a4d297.png', 'popup_banner', 0, 1, '2026-11-15 14:40:02');
 
 -- --------------------------------------------------------
 
@@ -95,7 +97,11 @@ INSERT INTO `menus` (`id_menu`, `nama_menu`, `kategori`, `harga`, `deskripsi`, `
 (25, 'Chicken Popcorn', 'snack', 23000, 'Potongan ayam kecil berbalut tepung crispy dengan bumbu gurih yang lezat', 'assets/uploads/menu/menu_snack_u4_20261112_160536_b02d7f43.jpg'),
 (26, 'Chicken Wings', 'snack', 28000, 'Sayap ayam berbumbu yang digoreng hingga matang dan disajikan dengan saus pilihan', 'assets/uploads/menu/menu_snack_u4_20261112_160635_eb016feb.jpg'),
 (27, 'Mix Platter', 'snack', 35000, 'Kombinasi kentang goreng, chicken popcorn, dan sosis yang cocok dinikmati bersama', 'assets/uploads/menu/menu_snack_u4_20261112_160736_105af9d7.jpg'),
-(28, 'Nut Butterscotch', 'coffe', 27000, 'Perpaduan expresso, susu creamy, dan sirup butterscotch dengan sentuhan rasa kacang yang gurih, manis, dan aromatik', 'assets/uploads/menu/menu_coffe_u4_20261112_161346_3de3b7ce.jpg');
+(28, 'Nut Butterscotch', 'coffe', 27000, 'Perpaduan expresso, susu creamy, dan sirup butterscotch dengan sentuhan rasa kacang yang gurih, manis, dan aromatik', 'assets/uploads/menu/menu_coffe_u4_20261112_161346_3de3b7ce.jpg'),
+(29, '[Anomali⚠] Cromboloni Brownies x Anomali Bundle', 'pastry_and_dessert', 40000, 'Cromboloni + Brownies spesial kolaborasi dengan anomali Tralalelo Tralala', 'assets/uploads/menu/menu_pastry_and_dessert_u4_20261115_152618_1ced00b0.jpg'),
+(30, '[Anomali⚠] Duo Spaghetti x Anomali Bundle ', 'pasta', 57000, 'Carbonara Spaghetti  + Bolognese Spaghetti spesial kolaborasi dengan Anomali Tung Tung Sahur', 'assets/uploads/menu/menu_pasta_u4_20261115_153306_12131912.png'),
+(31, '[Anomali⚠] Coffe Bundling x Anomali Bundle', 'coffe', 35000, 'Americno + Cappucino spesial kolaborasi dengan anomali Ballerina Cappuccina ', 'assets/uploads/menu/menu_coffe_u4_20261115_153624_a47d30e9.png'),
+(32, '[Anomali⚠] Milkshake Series x Anomali Bundle', 'non_coffe', 45000, 'Stawberry Milk + Chocolate Milkshake spesial kolaborasi dengan Anomali Tung Tung Sahur dan Ballerina Cappuccina ', 'assets/uploads/menu/menu_non_coffe_u4_20261115_153936_2f35c603.png');
 
 -- --------------------------------------------------------
 
@@ -118,41 +124,12 @@ CREATE TABLE `orders` (
 --
 
 INSERT INTO `orders` (`id_order`, `id_user`, `total_harga`, `metode_pembayaran`, `status_pesanan`, `created_at`, `tipe_order`) VALUES
-(1, 5, 123, 'QRIS', 'Siap Pick-up', '2026-10-28 08:04:24', 'dine_in'),
-(2, 5, 50000, 'Cash', 'Selesai', '2026-10-28 08:06:43', 'dine_in'),
-(3, 5, 50000, 'Cash', 'Pending', '2026-10-29 08:14:13', 'dine_in'),
-(4, 5, 132250, 'QRIS', 'Pending', '2026-10-29 08:28:11', 'dine_in'),
-(5, 5, 74750, 'QRIS', 'Pending', '2026-10-29 08:29:06', 'dine_in'),
-(6, 5, 74750, 'QRIS', 'Sedang Dibuat', '2026-10-29 08:29:55', 'dine_in'),
-(7, 5, 230000, 'QRIS', 'Pending', '2026-10-29 13:15:00', 'dine_in'),
-(8, 5, 92000, 'QRIS', 'Pending', '2026-10-29 13:32:59', 'dine_in'),
-(9, 5, 172500, 'Cash', 'Pending', '2026-10-29 13:48:51', 'dine_in'),
-(10, 5, 17250, 'Cash', 'Pending', '2026-10-29 14:23:45', 'dine_in'),
-(11, 5, 60500, 'QRIS', 'Pending', '2026-10-29 15:06:03', 'take_away'),
-(12, 5, 60500, 'Cash', 'Pending', '2026-10-29 15:10:00', 'take_away'),
-(13, 5, 17250, 'QRIS', 'Pending', '2026-10-29 15:11:07', 'dine_in'),
-(14, 5, 57500, 'QRIS', 'Pending', '2026-10-29 15:20:12', 'dine_in'),
-(15, 5, 20250, 'QRIS', 'Selesai', '2026-10-29 15:26:20', 'take_away'),
-(16, 5, 57500, 'QRIS', 'Selesai', '2026-10-29 15:29:20', 'dine_in'),
-(17, 6, 109250, 'QRIS', 'Selesai', '2026-10-29 15:53:29', 'dine_in'),
-(18, 6, 60500, 'QRIS', 'Selesai', '2026-10-29 16:08:36', 'take_away'),
-(19, 6, 115000, 'QRIS', 'Selesai', '2026-10-29 16:15:50', 'dine_in'),
-(20, 6, 1131, 'Cash', 'Selesai', '2026-10-30 08:11:34', 'dine_in'),
-(21, 7, 250391, 'QRIS', 'Selesai', '2026-10-30 08:12:36', 'take_away'),
-(22, 4, 77750, 'QRIS', 'Selesai', '2026-10-30 08:15:20', 'take_away'),
-(23, 6, 17250, 'QRIS', 'Selesai', '2026-10-30 08:20:41', 'dine_in'),
-(24, 5, 115000, 'QRIS', 'Selesai', '2026-10-31 06:35:09', 'dine_in'),
-(25, 5, 172500, 'Cash', 'Selesai', '2026-10-31 06:38:37', 'dine_in'),
-(26, 8, 57641, 'QRIS', 'Selesai', '2026-10-31 08:19:10', 'dine_in'),
-(27, 8, 57500, 'QRIS', 'Selesai', '2026-10-31 09:22:59', 'dine_in'),
-(28, 6, 92000, 'QRIS', 'Selesai', '2026-10-31 09:59:24', 'dine_in'),
-(29, 8, 17250, 'Cash', 'Selesai', '2026-10-31 10:04:36', 'dine_in'),
-(30, 5, 34050, 'QRIS', 'Siap Pick-up', '2026-11-02 08:30:21', 'take_away'),
-(31, 6, 60500, 'QRIS', 'Selesai', '2026-11-09 14:18:15', 'take_away'),
-(32, 6, 17250, 'Cash', 'Selesai', '2026-11-09 14:21:09', 'dine_in'),
-(33, 6, 17250, 'QRIS', 'Pending', '2026-11-10 11:24:42', 'dine_in'),
-(34, 6, 17250, 'QRIS', 'Dibatalkan', '2026-11-12 09:49:58', 'dine_in'),
-(35, 4, 65100, 'QRIS', 'Dibatalkan', '2026-11-12 15:20:03', 'take_away');
+(45, 9, 70180, 'Cash', 'Selesai', '2026-11-16 15:22:21', 'dine_in'),
+(46, 9, 114950, 'QRIS', 'Selesai', '2026-11-16 15:23:15', 'dine_in'),
+(47, 9, 27830, 'Cash', 'Selesai', '2026-11-16 15:23:43', 'dine_in'),
+(48, 10, 89700, 'QRIS', 'Selesai', '2026-11-16 16:14:53', 'take_away'),
+(49, 10, 45980, 'Cash', 'Selesai', '2026-11-16 16:19:45', 'dine_in'),
+(50, 10, 26780, 'QRIS', 'Dibatalkan', '2026-11-16 16:22:15', 'take_away');
 
 -- --------------------------------------------------------
 
@@ -173,54 +150,17 @@ CREATE TABLE `order_items` (
 --
 
 INSERT INTO `order_items` (`id_order_item`, `id_order`, `id_menu`, `jumlah`, `subtotal`) VALUES
-(1, 1, 1, 1, 123),
-(2, 2, 2, 1, 50000),
-(3, 3, 2, 1, 50000),
-(4, 4, 2, 2, 100000),
-(5, 4, 3, 1, 15000),
-(6, 5, 2, 1, 50000),
-(7, 5, 3, 1, 15000),
-(8, 6, 2, 1, 50000),
-(9, 6, 3, 1, 15000),
-(10, 7, 2, 1, 50000),
-(11, 7, 3, 10, 150000),
-(12, 8, 2, 1, 50000),
-(13, 8, 3, 2, 30000),
-(14, 9, 2, 3, 150000),
-(15, 10, 3, 1, 15000),
-(16, 11, 2, 1, 50000),
-(17, 12, 2, 1, 50000),
-(18, 13, 3, 1, 15000),
-(19, 14, 2, 1, 50000),
-(20, 15, 3, 1, 15000),
-(21, 16, 2, 1, 50000),
-(22, 17, 2, 1, 50000),
-(23, 17, 3, 3, 45000),
-(24, 18, 2, 1, 50000),
-(25, 19, 2, 2, 100000),
-(26, 20, 1, 8, 984),
-(27, 21, 1, 1, 123),
-(28, 21, 2, 4, 200000),
-(29, 21, 3, 1, 15000),
-(30, 22, 2, 1, 50000),
-(31, 22, 3, 1, 15000),
-(32, 23, 3, 1, 15000),
-(33, 24, 2, 2, 100000),
-(34, 25, 2, 3, 150000),
-(35, 26, 1, 1, 123),
-(36, 26, 2, 1, 50000),
-(37, 27, 2, 1, 50000),
-(38, 28, 2, 1, 50000),
-(39, 28, 5, 2, 30000),
-(40, 29, 5, 1, 15000),
-(41, 30, 3, 1, 15000),
-(42, 30, 4, 1, 12000),
-(43, 31, 2, 1, 50000),
-(44, 32, 5, 1, 15000),
-(45, 33, 3, 1, 15000),
-(46, 34, 3, 1, 15000),
-(47, 35, 6, 1, 22000),
-(48, 35, 22, 1, 32000);
+(64, 45, 2, 1, 18000),
+(65, 45, 29, 1, 40000),
+(66, 46, 3, 1, 23000),
+(67, 46, 13, 2, 44000),
+(68, 46, 17, 1, 28000),
+(69, 47, 4, 1, 23000),
+(70, 48, 27, 1, 35000),
+(71, 48, 31, 1, 35000),
+(72, 49, 2, 1, 18000),
+(73, 49, 15, 1, 20000),
+(74, 50, 12, 1, 18000);
 
 -- --------------------------------------------------------
 
@@ -244,8 +184,8 @@ INSERT INTO `users` (`id_user`, `nama`, `username`, `password`, `role`) VALUES
 (4, 'admin', 'admin', '$2y$10$S4Shb6OXJPD258GCWCBTIeHWOLLAbeAj3sngFm.iJ35wUDlmXC6DW', 'admin'),
 (5, 'member', 'member', '$2y$10$fTEtqbI12NF8Q77b2OllZuRRljNao2RVjqN1YwufOPD3sRNvNvyZu', 'customer'),
 (6, 'Khelsea', 'khelsea', '$2y$10$EAhL1QL4O9jFAZHd1Xtleu6JKycFZSOFlIv6Rb4kOmT9xQQcLOkcW', 'customer'),
-(7, 'p', 'p', '$2y$10$7h14EiuEDJ0UH07A9CUgA.7.OVit99mL5vvHd6co7fIOEyiFU0ee.', 'customer'),
-(8, 'Elvina ', 'elvina', '$2y$10$w7ka2Ad4ZmFaOBf0MlECGeZTpeIZxu/eJMFRworRbPoVNdAsvy5oi', 'customer');
+(9, 'Budi Santoso', 'budi', '$2y$10$9wQEZEZdLXz8L1kM49/9JO91vwviJGGt5ygm6SaKvm.AsRTC7K82G', 'customer'),
+(10, 'Citra Apriani', 'citra', '$2y$10$dSTdFzMDbDUQ0Q91QidvL.bt77EUnmghgisiNinyWEq57d0PJqYVK', 'customer');
 
 --
 -- Indexes for dumped tables
@@ -293,31 +233,31 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `banner`
 --
 ALTER TABLE `banner`
-  MODIFY `id_image` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id_image` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT for table `menus`
 --
 ALTER TABLE `menus`
-  MODIFY `id_menu` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
+  MODIFY `id_menu` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
 
 --
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id_order` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
+  MODIFY `id_order` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=51;
 
 --
 -- AUTO_INCREMENT for table `order_items`
 --
 ALTER TABLE `order_items`
-  MODIFY `id_order_item` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=49;
+  MODIFY `id_order_item` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=75;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id_user` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id_user` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- Constraints for dumped tables
